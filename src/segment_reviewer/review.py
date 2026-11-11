@@ -6,10 +6,11 @@ import threading
 from dataclasses import dataclass
 from pathlib import Path
 
-from .annotations import AnnotationTable, segment_bounds
-from .config import ALL_VERDICT_DIR_NAMES, ReviewConfig
+from .annotations import AnnotationTable, Review, ReviewLog, SourceManifest, segment_bounds
+from .config import REVIEW_LOG, ReviewConfig
 from .labels import LabelStore
-from .naming import SegmentParser, nfc, slug, split_labels
+from .naming import SegmentParser, nfc, slug, split_labels, with_labels
+from .outcome import OUTCOMES, Outcome, decide
 from .spectrogram import SpectrogramError, duration_seconds, render
 from .storage import Backend
 
@@ -35,8 +36,12 @@ class SegmentView:
     extra: str | None
 
 
+class StaleSegment(LookupError):
+    """The browser asked to review a clip that is no longer the one on screen."""
+
+
 class ReviewSession:
-    """Holds the pending list and applies verdicts to it.
+    """Holds the pending list and files each reviewed segment.
 
     One session per running server: the reviewer is a single person walking a
     folder, and every mutation is serialised behind one lock so a double-click
@@ -46,7 +51,6 @@ class ReviewSession:
     def __init__(self, backend: Backend, config: ReviewConfig) -> None:
         self.backend = backend
         self.config = config
-        self.dirs = config.resolved_verdict_dirs()
         #: Where the verdict folders live — the segments folder unless --output
         #: says otherwise. Resolved once, so every path built from it agrees.
         self.output_root = (
@@ -60,14 +64,17 @@ class ReviewSession:
         )
         self._lock = threading.RLock()
         self._ensure_dirs()
+        self.sources = SourceManifest(backend)
+        self.log = ReviewLog(backend, backend.join(self.output_root, REVIEW_LOG))
         self.annotations = AnnotationTable(
             backend,
             self._annotations_path(),
             enabled=config.save_annotations,
+            sources=self.sources,
         )
         self.segments: list[str] = []
         self.index = 0
-        self._reviewed: dict[str, int] = {k: 0 for k in self.dirs}
+        self._reviewed: dict[str, int] = {k: 0 for k in OUTCOMES}
         self.rescan()
         self.labels = LabelStore(
             backend,
@@ -79,10 +86,9 @@ class ReviewSession:
 
     # ── setup ────────────────────────────────────────────────────────────────
     def _ensure_dirs(self) -> None:
-        wanted = [self.dirs["true"], self.dirs["false"]]
-        if self.config.multi_label:
-            wanted.append(self.dirs["multi"])
-        for name in wanted:
+        # ``labelled/`` only ever holds clips that came with no prediction, so it
+        # is made when the first one is filed rather than in every collection.
+        for name in OUTCOMES[:3]:
             self.backend.makedirs(self.verdict_root(name))
 
     def _annotations_path(self) -> str:
@@ -102,17 +108,16 @@ class ReviewSession:
         return self.backend.join(self.output_root, name)
 
     def _skip_roots(self) -> list[str]:
-        """Folders excluded from review — every verdict name, in any language.
+        """Folders excluded from review — the verdict folders.
 
         Taken under the segments folder as well as under ``--output``: a review
         writing elsewhere must still skip the verdict folders of an earlier run
         that wrote in place, and an output folder nested inside the segments
         folder must not hand its own clips back as pending.
         """
-        names = set(ALL_VERDICT_DIR_NAMES) | set(self.dirs.values())
         roots = {self.backend.root, self.output_root}
         return sorted(
-            self.backend.join(root, name) for root in roots for name in names
+            self.backend.join(root, name) for root in roots for name in OUTCOMES
         )
 
     def collect(self) -> list[str]:
@@ -134,16 +139,16 @@ class ReviewSession:
     def _count_reviewed(self) -> dict[str, int]:
         """Walk the verdict folders once. Over SFTP this is the expensive call."""
         done = {}
-        for key, name in self.dirs.items():
+        for name in OUTCOMES:
             folder = self.verdict_root(name)
-            done[key] = len(self.backend.walk_wavs(folder)) if self.backend.isdir(folder) else 0
+            done[name] = len(self.backend.walk_wavs(folder)) if self.backend.isdir(folder) else 0
         return done
 
     def counts(self) -> dict[str, int]:
         """Pending and reviewed totals.
 
         The reviewed tallies are taken at rescan and then kept up to date by each
-        verdict, rather than re-walking three folders on every request the browser
+        review, rather than re-walking the folders on every request the browser
         makes — a recount over SFTP costs a full remote listing.
         """
         with self._lock:
@@ -237,97 +242,110 @@ class ReviewSession:
         """The labels offered as buttons in the reviewer."""
         return self.labels.labels
 
-    # ── verdicts ─────────────────────────────────────────────────────────────
-    def _destination_dir(self, info, verdict: str, final: list[str]) -> str:
-        """Where a segment goes once a verdict is given.
+    # ── reviewing a segment ──────────────────────────────────────────────────
+    def _destination_dir(self, info, outcome: Outcome) -> str:
+        """Where a reviewed segment goes: its outcome, then what was predicted.
 
-        A clip carrying several labels belongs to no single true/false folder, so
-        it goes to the multi folder either way. Beyond that the layout follows
-        where the label lives:
+        Filing by the *prediction* keeps each folder answering one question —
+        ``wrong/PONTO_A/BOAALB/`` holds exactly the clips the model called
+        BOAALB and got wrong, so counting a folder is that class's precision.
+        The labels the reviewer added beyond the prediction are appended to
+        the file name, and every clip's labels are in the review log.
 
-        * **Label in a folder** (the default) — the clip keeps the folders that
-          stood *above* its label, with the label folder swapped for the one the
-          reviewer confirmed: ``PONTO_A/BOAALB/x.wav`` accepted stays
-          ``true/PONTO_A/BOAALB/x.wav``, and corrected to TURDRU becomes
-          ``false/PONTO_A/TURDRU/x.wav``. Whatever sat *below* the label is not
-          rebuilt: under ``--label-depth``, ``BOAALB/PONTO_A/20240115/x.wav``
-          becomes ``false/TURDRU/x.wav``, one folder per label holding the clips
-          themselves — the site and the day are already in the file name.
-        * **Label in the file name** — the name already carries the verdict's
-          label, so the clip is filed flat under the verdict folder, with one
-          subfolder per label for rejections.
+        * **Label in a folder** (the default) — the folders that stood *above*
+          the label are kept: ``PONTO_A/BOAALB/x.wav`` becomes
+          ``correct/PONTO_A/BOAALB/x.wav`` or ``wrong/PONTO_A/BOAALB/x.wav``.
+          Whatever sat *below* the label is not rebuilt: under
+          ``--label-depth``, ``BOAALB/PONTO_A/20240115/x.wav`` becomes
+          ``wrong/BOAALB/x.wav`` — the site and day are in the file name.
+        * **Label in the file name** — filed flat under the prediction:
+          ``wrong/BOAALB/x.wav``.
+        * **No prediction** — the folders it sat in, under ``labelled/``.
         """
-        bucket = "multi" if len(final) > 1 else verdict
-        verdict_root = self.verdict_root(self.dirs[bucket])
+        parts = [] if info.label_in_filename else list(info.prefix)
+        if outcome.predicted:
+            parts.append(slug(outcome.predicted))
+        root = self.verdict_root(outcome.kind)
+        return self.backend.join(root, *parts) if parts else root
 
-        if info.label_in_filename:
-            if bucket == "false" and final:
-                return self.backend.join(verdict_root, slug(final[0]))
-            return verdict_root
+    def review(self, labels: list[str] | None = None, *, unsure: bool = False,
+               relpath: str | None = None) -> dict:
+        """File the current segment as holding *labels*, and drop it from the list.
 
-        # The folders above the label are kept exactly as they are on disk; only
-        # the label the reviewer typed is made safe for a file name.
-        parts = list(info.prefix)
-        label_folder = "_".join(slug(x) for x in final if str(x).strip())
-        if label_folder:
-            parts.append(label_folder)
-        return self.backend.join(verdict_root, *parts) if parts else verdict_root
-
-    def apply_verdict(self, verdict: str, labels: list[str] | None = None) -> dict:
-        """File the current segment under its verdict and drop it from the list."""
-        if verdict not in ("true", "false"):
-            raise ValueError(f"unknown verdict: {verdict}")
+        The outcome — correct, wrong, unsure, or labelled when nothing was
+        predicted — follows from *labels* and the clip's own label; see
+        :func:`segment_reviewer.outcome.decide`. *relpath*, when given, must be
+        the clip on screen: a second tab, or a click racing a rescan, must not
+        file a clip the reviewer never heard.
+        """
         with self._lock:
             if not self.segments:
-                return {"moved": None}
-            src = self.segments.pop(self.index)
+                return {"moved": None, "outcome": None}
+            src = self.segments[self.index]
+            rel_src = self.backend.relpath(src, self.backend.root).replace(self.backend.sep, "/")
+            if relpath is not None and relpath != rel_src:
+                raise StaleSegment(
+                    f"{relpath} is no longer the segment on screen ({rel_src} is)"
+                )
             info = self._parse(src)
-            final = [x for x in (labels or []) if str(x).strip()]
-            if not final and info.label:
-                final = [info.label]
+            outcome = decide(info.label, labels, unsure=unsure)
+            if len(outcome.labels) > 1 and not self.config.multi_label:
+                raise ValueError("this review allows one label per segment")
 
             # Read the clip before moving it: it has to be on disk to be measured.
-            start_s = end_s = None
-            if self.annotations.enabled:
-                duration = None
-                try:
-                    duration = duration_seconds(self.backend.fetch(src))
-                except Exception:  # noqa: BLE001 - fall back to the filename window
-                    duration = None
-                start_s, end_s = segment_bounds(duration, info.det_start, info.det_end)
-
-            folder = self._destination_dir(info, verdict, final)
-            self.backend.makedirs(folder)
-            # Only a name that carries its own label is rewritten; where the label
-            # lives in the folder the file name is left exactly as it was found.
-            filename = self.parser.replace_label(self.backend.basename(src), final)
-            dest = self.backend.free_path(folder, filename)
             try:
-                self.backend.move(src, dest)
+                duration = duration_seconds(self.backend.fetch(src))
+            except Exception:  # noqa: BLE001 - fall back to the filename window
+                duration = None
+            start_s, end_s = segment_bounds(duration, info.det_start, info.det_end)
+
+            folder = self._destination_dir(info, outcome)
+            self.backend.makedirs(folder)
+            # The folder names the prediction; the file name gains every label
+            # the reviewer added beyond it, so the tree reads without the log:
+            #   wrong/PONTO_A/BOAALB/x_TURDRU.wav    called BOAALB, really TURDRU
+            #   correct/PONTO_A/BOAALB/x_PHYLUT.wav  BOAALB, and PHYLUT as well
+            # Nothing added — a plain correct, a wrong holding nothing on the
+            # list — and anything marked unsure keep the name as it was found.
+            name = self.backend.basename(src)
+            if outcome.is_annotation:
+                name = with_labels(name, outcome.added)
+            dest = self.backend.free_path(folder, name)
+            self.backend.move(src, dest)
+
+            record = Review(
+                outcome=outcome,
+                source=rel_src,
+                destination=self.backend.relpath(dest, self.output_root)
+                .replace(self.backend.sep, "/"),
+                site=info.site,
+                recording=self.sources.recording_for(self.backend.basename(src)),
+                score=info.score,
+                start_s=start_s,
+                end_s=end_s,
+            )
+            try:
+                self.log.append(record)
             except Exception:
-                self.segments.insert(self.index, src)  # put it back, nothing happened
+                # The log is the record of the review: a clip filed without a
+                # row would be a verdict nobody can read back. Undo the move.
+                self.backend.move(dest, src)
                 raise
+            self.segments.pop(self.index)
             # The clip's own folder, and whatever else it was the last clip in,
             # are no longer part of the collection: a reviewed folder empties out
             # rather than leaving a shell of the tree behind.
             self.backend.prune_empty(self.backend.dirname(src), self.backend.root)
 
-            if self.annotations.enabled:
-                recording = self.annotations.recording_for(self.backend.basename(src))
-                try:
-                    # One row per label: a segment holding two species produces two
-                    # rows sharing the same recording, times and site.
-                    for one in final:
-                        self.annotations.append(info.site, recording, one, start_s, end_s)
-                except Exception as exc:  # noqa: BLE001
-                    self.annotations.state.error = str(exc)
+            try:
+                self.annotations.append(record)
+            except Exception as exc:  # noqa: BLE001 - derived data; the log has it
+                self.annotations.state.error = str(exc)
 
-            bucket = "multi" if len(final) > 1 else verdict
-            self._reviewed[bucket] = self._reviewed.get(bucket, 0) + 1
-
+            self._reviewed[outcome.kind] = self._reviewed.get(outcome.kind, 0) + 1
             if self.index >= len(self.segments) and self.index > 0:
                 self.index -= 1
-            return {"moved": self.backend.relpath(dest, self.output_root)}
+            return {"moved": record.destination, "outcome": outcome.kind}
 
     # ── media ────────────────────────────────────────────────────────────────
     def spectrogram(self, index: int, *, spec_type: str, fmin: int, fmax: int,
@@ -348,4 +366,4 @@ class ReviewSession:
         return split_labels(text, fallback)
 
 
-__all__ = ["ReviewSession", "SegmentView", "SpectrogramError"]
+__all__ = ["ReviewSession", "SegmentView", "SpectrogramError", "StaleSegment"]

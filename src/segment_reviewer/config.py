@@ -6,22 +6,18 @@ from dataclasses import dataclass, field
 
 from .naming import DEFAULT_DATETIME_FORMAT
 
-#: Verdict folder names per interface language.
-VERDICT_DIRS: dict[str, dict[str, str]] = {
-    "en": {"true": "true", "false": "false", "multi": "multi"},
-    "pt-BR": {"true": "verdadeiro", "false": "falso", "multi": "multi"},
-}
-
-#: Folders never offered for review, whichever language wrote them. A folder
-#: reviewed in English is not handed back for review under a Portuguese session.
-ALL_VERDICT_DIR_NAMES: set[str] = {
-    name for mapping in VERDICT_DIRS.values() for name in mapping.values()
-}
-
 #: Optional manifest mapping each clip to the recording it was cut from. When a
 #: collection carries one, the annotation table can name that recording.
 SOURCES_CSV = "segment_sources.csv"
 ANNOTATION_COLUMNS = ["site", "file", "label", "start_time", "end_time"]
+
+#: The review log: one row per reviewed segment, written beside the verdict
+#: folders. ``labels`` and ``added`` hold ``;``-separated labels.
+REVIEW_LOG = "reviews.csv"
+REVIEW_COLUMNS = [
+    "reviewed_at", "source", "destination", "predicted", "score", "outcome",
+    "labels", "added", "site", "recording", "start_time", "end_time",
+]
 
 #: Where the editable label list is kept, relative to the segments folder.
 DEFAULT_LABELS_FILE = "labels.txt"
@@ -33,9 +29,8 @@ class ReviewConfig:
 
     The spectrogram fields are only the *initial* values shown in the browser;
     they can be changed live without restarting. The rest is fixed for the run —
-    switching the interface language in the browser deliberately does **not**
-    rename the verdict folders, so a review split over two sessions files its
-    clips in one consistent place.
+    the verdict folders are named after the outcomes and never translated, so
+    a review split over sessions in two languages files its clips in one place.
     """
 
     segments: str = "."
@@ -65,20 +60,8 @@ class ReviewConfig:
     freq_max_hz: int = 0  # 0 → Nyquist
     db_min: int = -80
 
-    #: Folder the verdict folders are created in. Empty means the segments
-    #: folder itself; a relative path is read against it, an absolute one is
-    #: taken as given, so a review can write anywhere the reviewer can reach.
+    #: Folder the verdict folders and the review log are created in. Empty
+    #: means the segments folder itself; a relative path is read against it, an
+    #: absolute one is taken as given, so a review can write anywhere the
+    #: reviewer can reach.
     output: str = ""
-
-    # Verdict folder names (resolved from `lang` when left empty)
-    true_dir: str = ""
-    false_dir: str = ""
-    multi_dir: str = ""
-
-    def resolved_verdict_dirs(self) -> dict[str, str]:
-        defaults = VERDICT_DIRS.get(self.lang, VERDICT_DIRS["en"])
-        return {
-            "true": self.true_dir or defaults["true"],
-            "false": self.false_dir or defaults["false"],
-            "multi": self.multi_dir or defaults["multi"],
-        }

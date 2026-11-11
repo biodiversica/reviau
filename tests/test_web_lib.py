@@ -146,3 +146,32 @@ def test_a_selected_label_missing_from_the_list_still_gets_a_button():
     """)
     assert out == {"extra": ["BOAALB", "TURDRU"],
                    "noDupes": ["BOAALB", "PHYLUT"], "empty": []}
+
+
+@node
+def test_each_button_reads_the_selection_one_way():
+    """Correct always keeps the prediction, wrong always drops it — whatever
+    the chips say, the two buttons can never file a contradiction."""
+    out = run("""
+      const P = 'BOAALB';
+      console.log(JSON.stringify({
+        correct:       lib.reviewLabels('correct', ['BOAALB'], P, false),
+        correctPlus:   lib.reviewLabels('correct', ['BOAALB', 'PHYLUT'], P, false),
+        correctReAdds: lib.reviewLabels('correct', ['PHYLUT'], P, false),
+        correctSingle: lib.reviewLabels('correct', ['TURDRU'], P, true),
+        wrongUntouched: lib.reviewLabels('wrong', ['BOAALB'], P, false),
+        wrongTo:       lib.reviewLabels('wrong', ['BOAALB', 'TURDRU'], P, false),
+        unsure:        lib.reviewLabels('unsure', ['TURDRU'], P, false),
+        noPrediction:  lib.reviewLabels('correct', ['rain'], '', false),
+      }));
+    """)
+    assert out == {
+        "correct": ["BOAALB"],
+        "correctPlus": ["BOAALB", "PHYLUT"],
+        "correctReAdds": ["BOAALB", "PHYLUT"],
+        "correctSingle": ["BOAALB"],
+        "wrongUntouched": [],
+        "wrongTo": ["TURDRU"],
+        "unsure": ["TURDRU"],
+        "noPrediction": ["rain"],
+    }

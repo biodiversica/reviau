@@ -291,14 +291,20 @@ kbd {
   border-bottom-width: 1px;
 }
 .chip:hover { border-color: var(--accent); }
-.chip.on { background: var(--ok); border-color: var(--ok); }
-.chip.on .chip-pick { color: var(--ok-ink); font-weight: 600; }
-.chip.on .chip-pick kbd {
-  background: transparent;
-  border-color: color-mix(in srgb, var(--ok-ink) 45%, transparent);
-  color: var(--ok-ink);
-  opacity: .85;
+/* A lit chip says "this is in the clip" — not "correct" — so it takes the
+ * accent, leaving green and red to the Correct / Wrong buttons. */
+.chip.on {
+  background: color-mix(in srgb, var(--accent) 18%, var(--bg));
+  border-color: var(--accent);
 }
+.chip.on .chip-pick { font-weight: 600; }
+.chip.on .chip-pick kbd { border-color: var(--accent); }
+/* The prediction: shown so the number keys keep their places, but answered by
+ * Correct / Wrong rather than by clicking it. */
+.chip.predicted { border-style: dashed; }
+.chip.predicted:hover { border-color: var(--line); }
+.chip.predicted .chip-pick:disabled { cursor: default; opacity: .7; }
+.chip-tag { font-size: 11px; opacity: .75; font-weight: 400; }
 
 .chip-drop {
   display: none;

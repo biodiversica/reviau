@@ -34,7 +34,9 @@ cli = typer.Typer(
     context_settings={"help_option_names": ["-h", "--help"]},
     help=(
         "Review a folder of audio segments in the browser: listen to each clip, "
-        "look at its spectrogram, and mark it true or false.\n\n"
+        "look at its spectrogram, and say what is in it. Whether its label was "
+        "correct or wrong follows from that, and every review is logged to "
+        "reviews.csv.\n\n"
         "By default a segment's label is the folder it sits in, and its file name "
         "is read as [site]_[YYYYMMDD]_[HHMMSS]_[start]_[end]_* — both are "
         "configurable with --label-from and --filename-pattern.\n\n"
@@ -113,9 +115,11 @@ def _summary(session: ReviewSession, config: ReviewConfig, t) -> str:
         (t("cli.folder"), session.backend.display),
         (t("cli.output"), session.output_root),
         (t("cli.pending"), str(counts["pending"])),
-        (t("cli.already_true"), str(counts["true"])),
-        (t("cli.already_false"), str(counts["false"])),
-        (t("cli.already_multi"), str(counts["multi"])),
+        (t("cli.already_correct"), str(counts["correct"])),
+        (t("cli.already_wrong"), str(counts["wrong"])),
+        (t("cli.already_unsure"), str(counts["unsure"])),
+        *([(t("cli.already_labelled"), str(counts["labelled"]))] if counts["labelled"] else []),
+        (t("cli.review_log"), session.log.path),
         (t("cli.label_from"), config.label_from),
         *([(t("cli.label_depth"), str(config.label_depth))] if config.label_depth else []),
         (t("cli.pattern"), config.filename_pattern),
@@ -126,7 +130,6 @@ def _summary(session: ReviewSession, config: ReviewConfig, t) -> str:
         (t("cli.multi"), t("cli.on") if config.multi_label else t("cli.off")),
         (t("cli.annotations"),
          session.annotations.state.path if session.annotations.enabled else t("cli.off")),
-        (t("cli.verdict_dirs"), "  ".join(f"{k}/ → {v}/" for k, v in session.dirs.items())),
         (t("cli.spec_type"), config.spec_type),
         (t("cli.freq_range"), freq),
         (t("cli.db_floor"), f"{config.db_min} dB"),
@@ -179,7 +182,7 @@ def review(
     ),
     multi_label: bool = typer.Option(
         True, "--multi-label/--no-multi-label",
-        help="Allow several labels per segment; such clips are filed under multi/. "
+        help="Allow several labels per segment, e.g. two species singing at once. "
              "On by default; --no-multi-label restricts each segment to one label.",
     ),
     labels_file: Optional[str] = typer.Option(
@@ -193,7 +196,8 @@ def review(
     ),
     annotations: bool = typer.Option(
         False, "--annotations/--no-annotations",
-        help="Write one row per reviewed label to a CSV table.",
+        help="Also write a CSV with one row per label a segment is confirmed to "
+             "hold; rejected predictions and unsure segments add no row.",
     ),
     annotations_path: str = typer.Option(
         "", "--annotations-path",
@@ -211,12 +215,9 @@ def review(
     output: str = typer.Option(
         "", "--output", "-o",
         help="Where the reviewed segments are written: the folder holding "
-             "true/, false/ and multi/. Relative paths are inside the segments "
-             "folder.  [default: the segments folder itself]",
+             "correct/, wrong/, unsure/ and reviews.csv. Relative paths are inside "
+             "the segments folder.  [default: the segments folder itself]",
     ),
-    true_dir: str = typer.Option("", "--true-dir", help="Folder name for accepted segments. [default: per --lang]"),
-    false_dir: str = typer.Option("", "--false-dir", help="Folder name for rejected segments. [default: per --lang]"),
-    multi_dir: str = typer.Option("", "--multi-dir", help="Folder name for multi-label segments. [default: multi]"),
     host: str = typer.Option(
         "127.0.0.1", "--host",
         help="Address to bind. Use 0.0.0.0 to reach the GUI from another machine.",
@@ -303,9 +304,6 @@ def review(
         freq_min_hz=fmin,
         freq_max_hz=fmax,
         db_min=db_floor,
-        true_dir=true_dir,
-        false_dir=false_dir,
-        multi_dir=multi_dir,
     )
 
     try:

@@ -4,10 +4,12 @@
 
 Uma ferramenta de linha de comando que serve uma **interface no navegador para
 revisar uma pasta de segmentos de áudio**. Cada clipe aparece como espectrograma,
-com o que sua pasta e seu nome de arquivo demonstram sobre ele; você escuta e marca
-como **Verdadeiro** (correto) ou **Falso** (errado, com o rótulo correto). Os
-clipes revisados são movidos para `verdadeiro/`, `falso/` ou `multi/` dentro da
-pasta de segmentos e, opcionalmente, registrados numa tabela de anotações.
+com o que sua pasta e seu nome de arquivo demonstram sobre ele; você escuta e diz
+**o que há nele**. Se o rótulo com que ele chegou estava **correto** ou **errado**
+decorre dessa resposta. Os clipes revisados são movidos para `correct/`, `wrong/`
+ou `unsure/`, cada revisão é registrada em `reviews.csv` — previsão, resultado e o
+que foi realmente ouvido — e os rótulos confirmados podem ir para uma tabela de
+anotações.
 
 Funciona com qualquer conjunto de clipes, não importa como tenham sido gerados —
 a saída de um detector, exemplos recortados à mão, as previsões de um
@@ -131,24 +133,39 @@ imprime o endereço que as outras máquinas devem usar.
 
 | Controle | O que faz |
 | --- | --- |
-| **Botões de rótulo** | Um botão por rótulo. Clique para marcá-lo neste segmento; clique de novo para desmarcar. O rótulo do próprio segmento já vem marcado, então aceitá-lo é um clique só. <kbd>1</kbd>…<kbd>9</kbd> acionam os nove primeiros. |
-| **✔ Verdadeiro** | O rótulo está certo. O clipe mantém seu caminho, sob `verdadeiro/`. |
-| **✘ Falso** | Errado. Arquivado sob a mesma seleção, em `falso/` em vez de `verdadeiro/` — então marque o(s) rótulo(s) correto(s) antes de apertar. Sem nada marcado, o clipe vai para `falso/desconhecido/`. |
+| **Botões de rótulo** | Qualquer *outra* coisa neste clipe — ou o que ele realmente é. Cada segmento começa sem nada marcado; clique para marcar um rótulo, clique de novo para desmarcar. O botão da própria previsão aparece como **◆ previsto** e travado: ele é respondido por Correto ou Errado, não clicando nele. <kbd>1</kbd>…<kbd>9</kbd> acionam os nove primeiros. |
+| **✔ Correto** | A previsão está certa. Salvo como a previsão mais qualquer rótulo marcado — uma segunda espécie cantando junto. O botão diz o que vai salvar: *✔ Correto + PHYLUT*. |
+| **✘ Errado** | A previsão está errada. Salvo com os rótulos marcados — o que o clipe realmente é — ou, sem nenhum, como sem nada da lista. O botão diz qual: *✘ Errado → TURDRU*, *✘ Errado · nada da lista*. |
+| **? Incerto** | Não dá para dizer. Arquivado em `unsure/`, fora das contagens de correto/errado e fora da tabela de anotações. |
 | **← Anterior / Próximo →** | Navega sem decidir nada. |
 | **Tipo / Hz mín / Hz máx / dB** | Atualiza o espectrograma na hora — eixo de frequência em mel, em Hz linear ou em Hz logarítmico. O player de áudio não é afetado, então o clipe continua tocando enquanto você muda a visualização. |
 | **✎** | Edita a própria lista de rótulos: cada botão ganha um **×** para removê-lo, e a caixa abaixo adiciona um novo. As mudanças são salvas em `labels.txt`, na pasta de segmentos. |
 | **⟳** | Relê a pasta, por exemplo quando chegam mais segmentos. |
 | **Idioma** | Alterna a interface entre Português e Inglês. |
 
-Os dois vereditos leem a mesma seleção — os botões dizem *o que* o clipe é, e
-Verdadeiro ou Falso só diz em qual pasta ele será salvo. Após a conclusão da revisão do clipe, o mesmo é removido da lista de revisão e o próximo clipe aparecerá automaticamente. 
+A previsão é a pergunta, e Correto ou Errado é a resposta; os botões de rótulo só
+acrescentam o que mais houver. Nada vem marcado, então um segmento rejeitado sem
+pensar duas vezes é salvo como "nada da lista" — nunca com um rótulo que sobrou
+do clipe anterior. Sem previsão para julgar, um único botão **✔ Salvar** grava os
+rótulos marcados. O servidor calcula o resultado de novo a partir dos rótulos
+recebidos — uma regra, num lugar só:
+
+| Rótulos salvos | Resultado |
+| --- | --- |
+| a previsão | correto |
+| a previsão e outros | correto (os outros são registrados como *added*) |
+| só outros rótulos | errado, e o clipe é na verdade esses |
+| nenhum | errado, e o clipe não tem nada da lista |
+| qualquer um, com Incerto | incerto |
+
+Após a revisão, o clipe sai da lista e o próximo aparece automaticamente.
 
 Um segmento pode receber vários rótulos — duas espécies cantando ao mesmo tempo —
 o que é o padrão; `--no-multi-label` limita cada segmento a um rótulo. Você pode ajustar os rótulos disponíveis quando for necessário.
 
-Teclado: <kbd>←</kbd> <kbd>→</kbd> para navegar, <kbd>T</kbd> / <kbd>F</kbd> para
-verdadeiro/falso, <kbd>1</kbd>…<kbd>9</kbd> para marcar os nove primeiros
-rótulos, <kbd>Espaço</kbd> para tocar ou pausar.
+Teclado: <kbd>←</kbd> <kbd>→</kbd> para navegar, <kbd>T</kbd> / <kbd>F</kbd> /
+<kbd>U</kbd> para correto / errado / incerto, <kbd>1</kbd>…<kbd>9</kbd> para
+marcar os nove primeiros rótulos, <kbd>Espaço</kbd> para tocar ou pausar.
 
 ### A lista de rótulos
 
@@ -170,25 +187,36 @@ para que as edições valham só naquela sessão.
 
 ### Onde o clipe é salvo após revisão?
 
-Um clipe revisado **mantém o caminho que tinha**, com a pasta do rótulo trocada
-pela que você confirmou. Nada da sua posição no conjunto se perde:
+Um clipe revisado é arquivado sob o seu **resultado** e depois o caminho que
+tinha — incluindo a pasta da **previsão**. Cada pasta responde a uma pergunta só:
+`wrong/PONTO_A/BOAALB/` guarda exatamente os clipes que o modelo chamou de BOAALB
+e errou, então contar uma pasta dá a precisão daquela classe. Os rótulos que você
+acrescentou vão para o fim do nome do arquivo, então a árvore se lê sem abrir o
+registro:
 
 ```
 PONTO_A/BOAALB/clipe.wav
-   ├── ✔ Verdadeiro                →  verdadeiro/PONTO_A/BOAALB/clipe.wav
-   ├── ✘ Falso, corrigido TURDRU   →  falso/PONTO_A/TURDRU/clipe.wav
-   └── dois rótulos                →  multi/PONTO_A/BOAALB_PHYLUT/clipe.wav
+   ├── ✔ Correto                   →  correct/PONTO_A/BOAALB/clipe.wav
+   ├── ✔ Correto, + PHYLUT         →  correct/PONTO_A/BOAALB/clipe_PHYLUT.wav
+   ├── ✘ Errado, na verdade TURDRU →  wrong/PONTO_A/BOAALB/clipe_TURDRU.wav
+   ├── ✘ Errado, TURDRU + PHYLUT   →  wrong/PONTO_A/BOAALB/clipe_TURDRU_PHYLUT.wav
+   ├── ✘ Errado, nada              →  wrong/PONTO_A/BOAALB/clipe.wav
+   └── ? Incerto                   →  unsure/PONTO_A/BOAALB/clipe.wav
 ```
 
-- Os nomes dos arquivos ficam **exatamente como foram encontrados** — o rótulo
-  está na pasta, então não há nada a corrigir no nome.
+- O nome do arquivo **ganha cada rótulo acrescentado além da previsão**, na ordem
+  em que foram marcados, com espaços escritos como `_` (`chuva forte` →
+  `_chuva_forte`). O nome original fica inteiro na frente deles. Sem nada
+  acrescentado — um Correto simples, ou um Errado sem nada da lista — e para o que
+  for marcado como Incerto, o nome fica exatamente como foi encontrado.
 - Com `--label-depth`, as pastas *abaixo* do rótulo **não** são recriadas:
   `BOAALB/PONTO_A/20240115/clipe.wav` corrigido para TURDRU vira
-  `falso/TURDRU/clipe.wav` — uma pasta por rótulo, com os clipes dentro.
-- Um segmento com **mais de um rótulo** vai para `multi/` em vez de
-  `verdadeiro/` ou `falso/`, sob uma pasta que nomeia todos os rótulos.
-- Um clipe sem pasta de rótulo é arquivado direto em `verdadeiro/`, ou em
-  `falso/<rótulo>/` assim que você nomear um.
+  `wrong/BOAALB/clipe_TURDRU.wav` — uma pasta por rótulo previsto, com os clipes
+  dentro.
+- Um clipe que chegou **sem rótulo** não tem previsão para acertar ou errar: é
+  arquivado em `labelled/`, mantendo as pastas em que estava, e todos os rótulos
+  dados vão para o nome.
+- Os nomes das pastas são os mesmos em qualquer idioma da interface.
 - Se o nome colidir, ganha um sufixo `_2`, `_3`, … — um arquivo já revisado nunca
   é sobrescrito.
 - A pasta de onde o clipe saiu é **removida quando o último clipe dela sai**,
@@ -196,12 +224,12 @@ PONTO_A/BOAALB/clipe.wav
   encolhe conforme a revisão avança. Uma pasta que ainda tenha qualquer coisa —
   um clipe pendente, um arquivo solto — é preservada, e a pasta de segmentos em
   si nunca é removida.
-- Clipes que já estão em `verdadeiro/`, `falso/` ou `multi/` ficam fora da lista
-  de pendentes, então a revisão pode ser dividida em várias sessões.
+- Clipes que já estão em `correct/`, `wrong/`, `unsure/` ou `labelled/` ficam
+  fora da lista de pendentes, então a revisão pode ser dividida em várias sessões.
 
-**Gravar em outro lugar.** `--output` (ou `-o`) cria as três pastas de veredito
-na pasta que você escolher, em vez de dentro da pasta de segmentos, deixando
-intacto o conjunto que está sendo revisado:
+**Gravar em outro lugar.** `--output` (ou `-o`) cria as pastas de veredito e o
+registro da revisão na pasta que você escolher, em vez de dentro da pasta de
+segmentos, deixando intacto o conjunto que está sendo revisado:
 
 ```bash
 segment-reviewer /dados/segmentos --output /dados/revisados
@@ -211,15 +239,36 @@ Um caminho relativo é lido a partir da pasta de segmentos (`-o revisados` →
 `/dados/segmentos/revisados/`), um absoluto é usado como está, e por SSH é um
 caminho na máquina remota. A tabela de anotações também vai para lá, a menos que
 `--annotations-path` diga outra coisa. Use o mesmo `--output` para retomar uma
-revisão: é ali que as contagens de "já verdadeiros/falsos" são feitas, e os
+revisão: é ali que as contagens de "já corretos/errados" são feitas, e os
 clipes já gravados lá nunca voltam para a lista de pendentes.
+
+### O registro da revisão
+
+Cada revisão acrescenta uma linha a **`reviews.csv`**, ao lado das pastas de
+veredito. Ele é sempre gravado, e é o registro da revisão:
+
+| Coluna | Contém |
+| --- | --- |
+| `reviewed_at` | Quando, com o fuso horário |
+| `source`, `destination` | Onde o clipe estava, relativo à pasta de segmentos, e para onde foi, relativo à pasta de saída |
+| `predicted`, `score` | O rótulo com que o clipe chegou, e o escore que o nome trazia |
+| `outcome` | `correct`, `wrong`, `unsure` ou `labelled` |
+| `labels` | O que o revisor diz que o clipe contém, separado por `;`; vazio quando não há nada da lista |
+| `added` | Esses rótulos fora a previsão: a correção, ou uma segunda espécie |
+| `site`, `recording`, `start_time`, `end_time` | Como na tabela de anotações abaixo |
+
+A precisão por classe é `correct / (correct + wrong)` agrupado por `predicted`, e
+`predicted` contra `labels` nas linhas erradas é a confusão entre classes. Se o
+registro não puder ser gravado, o clipe volta para o lugar e a revisão é recusada
+— um clipe nunca é arquivado sem a sua linha.
 
 ### A tabela de anotações
 
-Com `--annotations`, cada segmento revisado é acrescentado a um CSV com as colunas
-`site, file, label, start_time, end_time` — segmentos *verdadeiros* com o próprio
-rótulo, *falsos* com o rótulo corrigido, e uma linha por rótulo quando o segmento
-tem vários. Os tempos são a posição do clipe dentro da gravação de onde ele foi
+Com `--annotations`, cada rótulo que um segmento **comprovadamente contém** é
+acrescentado a um CSV com as colunas `site, file, label, start_time, end_time` —
+uma linha por rótulo, então um segmento com duas espécies dá duas linhas. Uma
+previsão rejeitada nunca aparece nele, nem clipes marcados como incertos ou sem
+nada da lista. Os tempos são a posição do clipe dentro da gravação de onde ele foi
 cortado, lidos do nome e ampliados até a duração real do clipe (então o padding
 entra na conta).
 
@@ -228,7 +277,7 @@ gravação ele veio, então isso é procurado num `segment_sources.csv` opcional
 (`segment,recording`) ao lado dos segmentos; sem ele a coluna fica vazia e a
 interface avisa embaixo dos botões.
 
-As linhas são gravadas conforme cada veredito é dado, e uma tabela existente é
+As linhas são gravadas conforme cada segmento é revisado, e uma tabela existente é
 complementada, então revisões em várias sessões se somam.
 
 ---
@@ -287,7 +336,7 @@ segment-reviewer ~/segmentos \
 `--label-from` escolhe: `folder` (o padrão), `filename` (o grupo `label` do
 padrão) ou `none`. Um padrão que captura um grupo `label` muda sozinho para
 `filename`, a menos que você diga o contrário — e nesse modo o clipe é arquivado
-direto, com o **nome reescrito** para carregar o rótulo confirmado.
+direto sob o resultado e o rótulo previsto: `wrong/BOAALB/clipe_TURDRU.wav`.
 
 Para manter as pastas, diga isso. Com segmentos organizados como
 `[rótulo]/[ponto]_AAAAMMDD/clipe.wav`, o comando abaixo lê o rótulo da pasta de
@@ -311,12 +360,12 @@ similaridade no nome**:
 segment-reviewer ~/vector_search_segments --filename-pattern vector-search --annotations
 ```
 
-Como ali o rótulo mora no nome, esse modo se comporta como o notebook: os clipes
-são arquivados direto em `verdadeiro/`, `falso/<rótulo>/` e `multi/`, e o **nome
-do arquivo é reescrito** com os rótulos confirmados — um segmento corrigido para
-`TURDRU` é salvo como `..._0.873_TURDRU.wav`, e um com dois rótulos como
-`..._0.873_BOAALB_PHYLUT.wav` — para que o nome nunca guarde o rótulo errado. O
-escore aparece ao lado do rótulo na interface.
+Como ali o rótulo mora no nome, os clipes são arquivados direto sob o resultado
+e o rótulo previsto — `correct/BOAALB/`, `wrong/BOAALB/` — e os rótulos
+acrescentados vão para o fim do nome como em qualquer outro caso: um segmento
+chamado `..._0.873_BOAALB.wav` e corrigido para TURDRU vira
+`wrong/BOAALB/..._0.873_BOAALB_TURDRU.wav`. O escore aparece ao lado do rótulo na
+interface, e também no registro.
 
 ---
 
@@ -394,9 +443,9 @@ segment-reviewer SEGMENTOS [OPÇÕES]
                                 start, end, label, score, extra  [padrão: default]
       --datetime-format TEXT    Formato strptime da data e hora capturadas
                                 [padrão: %Y%m%d%H%M%S]
-      --no-multi-label          Limita cada segmento a um rótulo (vários rótulos é o
-                                padrão; esses clipes vão para multi/)
-      --annotations             Grava a tabela de anotações
+      --no-multi-label          Limita cada segmento a um rótulo (vários rótulos por
+                                segmento é o padrão)
+      --annotations             Grava também a tabela de rótulos confirmados
       --annotations-path TEXT   Onde ela fica  [padrão: <SEGMENTOS>/annotations.csv]
 
       --spec-type [mel|fft|log] Eixo de frequência inicial: escala mel, Hz linear ou
@@ -405,11 +454,8 @@ segment-reviewer SEGMENTOS [OPÇÕES]
       --fmax INTEGER            Frequência máxima inicial, Hz; 0 = Nyquist  [padrão: 0]
       --db-floor INTEGER        Valor mínimo em dB inicial  [padrão: -80]
 
-  -o, --output TEXT             Pasta onde os segmentos revisados são gravados
-                                [padrão: a própria pasta de segmentos]
-      --true-dir TEXT           Pasta dos segmentos aceitos  [padrão: conforme --lang]
-      --false-dir TEXT          Pasta dos segmentos rejeitados  [padrão: conforme --lang]
-      --multi-dir TEXT          Pasta dos segmentos com vários rótulos  [padrão: multi]
+  -o, --output TEXT             Pasta onde os segmentos revisados e o reviews.csv
+                                são gravados  [padrão: a própria pasta de segmentos]
 
       --host TEXT               Endereço para servir  [padrão: 127.0.0.1]
   -p, --port INTEGER            Porta  [padrão: 8765]
@@ -425,15 +471,11 @@ segment-reviewer SEGMENTOS [OPÇÕES]
       --version                 Mostra a versão e sai
 ```
 
-### Nomes das pastas de veredito e idioma
+### Pastas de veredito e idioma
 
-Começar em inglês guarda os clipes em `true/` e `false/`; começar em português,
-em `verdadeiro/` e `falso/`. **Trocar o idioma no navegador não renomeia as
-pastas** — uma revisão dividida em duas sessões continua num lugar só. Use
-`--true-dir` / `--false-dir` / `--multi-dir` para escolher os nomes.
-
-Pastas gravadas em *qualquer* uma das convenções ficam sempre fora da lista de
-pendentes, então uma pasta revisada em inglês não volta para revisão em português.
+As pastas de veredito são sempre `correct/`, `wrong/`, `unsure/` e `labelled/`, e o
+registro da revisão sempre grava esses nomes de resultado, qualquer que seja o
+idioma da interface — os dados de uma revisão nunca dependem de quem revisou.
 
 ---
 

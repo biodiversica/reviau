@@ -1,9 +1,16 @@
-"""The annotation table written as each verdict is given.
+"""The tables written as each segment is reviewed.
 
-One row per label: ``site, file, label, start_time, end_time``, where *file* is
-the recording the segment was cut from and the times are the segment's position
-inside it (padding included). Rows are appended as they happen, so a lost session
-keeps what was already reviewed.
+* The **review log** (``reviews.csv``) is the record of the review: one row per
+  segment, always written, holding what the model predicted, what the reviewer
+  heard, the outcome that follows, and where the clip was moved. Per-class
+  precision and the confusion between classes are read straight off it, and the
+  source/destination pair is what an undo needs.
+* The **annotation table** (``annotations.csv``, opt-in) is derived data: one row
+  per label a clip is confirmed to hold — ``site, file, label, start_time,
+  end_time``. A rejected prediction never appears in it, and neither does a clip
+  the reviewer was unsure of.
+
+Both are appended as they happen, so a lost session keeps what was reviewed.
 """
 
 from __future__ import annotations
@@ -11,10 +18,99 @@ from __future__ import annotations
 import csv
 import io
 from dataclasses import dataclass, field
+from datetime import datetime
 
-from .config import ANNOTATION_COLUMNS, SOURCES_CSV
+from .config import ANNOTATION_COLUMNS, REVIEW_COLUMNS, SOURCES_CSV
 from .naming import nfc, source_key
+from .outcome import Outcome
 from .storage import Backend
+
+#: How a segment's labels are joined in one review-log cell.
+LABEL_SEPARATOR = ";"
+
+
+class SourceManifest:
+    """The optional ``segment_sources.csv`` naming each clip's source recording.
+
+    A clip's file name rarely carries the recording it was cut from, so without
+    the manifest the ``recording``/``file`` columns stay empty.
+    """
+
+    def __init__(self, backend: Backend) -> None:
+        self.backend = backend
+        self.path = backend.join(backend.root, SOURCES_CSV)
+        self.error = ""
+        self._sources: dict[str, str] = {}
+        self._load()
+
+    @property
+    def present(self) -> bool:
+        return bool(self._sources)
+
+    def _load(self) -> None:
+        try:
+            text = self.backend.read_text(self.path)
+        except Exception as exc:  # noqa: BLE001
+            self.error = str(exc)
+            return
+        if text is None:
+            return
+        try:
+            for row in csv.DictReader(io.StringIO(text)):
+                if row.get("segment"):
+                    self._sources[source_key(row["segment"])] = row.get("recording", "")
+        except Exception as exc:  # noqa: BLE001
+            self.error = str(exc)
+
+    def recording_for(self, filename: str) -> str:
+        return self._sources.get(source_key(filename), "")
+
+
+@dataclass
+class Review:
+    """Everything known about one reviewed segment, ready to be written out."""
+
+    outcome: Outcome
+    source: str
+    destination: str
+    site: str | None
+    recording: str
+    score: float | None
+    start_s: float | None
+    end_s: float | None
+    reviewed_at: datetime = field(default_factory=lambda: datetime.now().astimezone())
+
+
+def _seconds(value: float | None) -> str:
+    return "" if value is None else f"{value:.3f}"
+
+
+class ReviewLog:
+    """Appends one row per reviewed segment to ``reviews.csv``."""
+
+    def __init__(self, backend: Backend, path: str) -> None:
+        self.backend = backend
+        self.path = path
+        self.rows = 0
+
+    def append(self, review: Review) -> None:
+        o = review.outcome
+        row = [
+            review.reviewed_at.isoformat(timespec="seconds"),
+            review.source,
+            review.destination,
+            o.predicted,
+            "" if review.score is None else f"{review.score:g}",
+            o.kind,
+            LABEL_SEPARATOR.join(o.labels),
+            LABEL_SEPARATOR.join(o.added),
+            nfc(review.site),
+            review.recording or "",
+            _seconds(review.start_s),
+            _seconds(review.end_s),
+        ]
+        self.backend.append_csv_row(self.path, row, REVIEW_COLUMNS)
+        self.rows += 1
 
 
 @dataclass
@@ -31,67 +127,45 @@ class AnnotationState:
 
 
 class AnnotationTable:
-    """Appends reviewed segments to a CSV, resolving their source recording."""
+    """Appends one row per confirmed label to the annotation CSV."""
 
-    def __init__(self, backend: Backend, path: str, *, enabled: bool) -> None:
+    def __init__(self, backend: Backend, path: str, *, enabled: bool,
+                 sources: SourceManifest) -> None:
         self.backend = backend
         self.path = path
         self.state = AnnotationState(path=path, enabled=enabled)
-        self._sources: dict[str, str] = {}
         if enabled and not path:
             self.state.enabled = False
             self.state.extra["no_path"] = True
         elif enabled:
-            self._load_sources()
+            self.state.have_sources = sources.present
+            if sources.error:
+                self.state.extra["read_error"] = sources.error
 
     @property
     def enabled(self) -> bool:
         return self.state.enabled
 
-    def _load_sources(self) -> None:
-        """Read the optional manifest mapping each clip to its source recording.
+    def append(self, review: Review) -> None:
+        """Write a row for every label the clip is confirmed to hold.
 
-        A clip's file name rarely carries the recording it was cut from, so
-        without a ``segment_sources.csv`` beside the segments the ``file`` column
-        stays empty. Collections that have no such manifest simply leave it blank.
+        A clip marked unsure says nothing confident, and a clip that holds
+        nothing on the list has no label to write — neither adds a row.
         """
-        csv_path = self.backend.join(self.backend.root, SOURCES_CSV)
-        try:
-            text = self.backend.read_text(csv_path)
-        except Exception as exc:  # noqa: BLE001
-            self.state.error = str(exc)
-            self.state.extra["read_error"] = str(exc)
+        if not self.enabled or not review.outcome.is_annotation:
             return
-        if text is None:
-            return
-        try:
-            for row in csv.DictReader(io.StringIO(text)):
-                if row.get("segment"):
-                    self._sources[source_key(row["segment"])] = row.get("recording", "")
-        except Exception as exc:  # noqa: BLE001
-            self.state.extra["read_error"] = str(exc)
-            return
-        self.state.have_sources = bool(self._sources)
-
-    def recording_for(self, filename: str) -> str:
-        return self._sources.get(source_key(filename), "")
-
-    def append(self, site: str | None, recording: str, label: str,
-               start_s: float | None, end_s: float | None) -> None:
-        """Write one row, creating the table with its header when new."""
-        if not self.enabled:
-            return
-        row = [
-            nfc(site),
-            recording or "",
-            nfc(label),
-            "" if start_s is None else f"{start_s:.3f}",
-            "" if end_s is None else f"{end_s:.3f}",
-        ]
-        self.backend.append_csv_row(self.path, row, ANNOTATION_COLUMNS)
-        self.state.rows += 1
-        if not recording:
-            self.state.rows_without_recording += 1
+        for label in review.outcome.labels:
+            row = [
+                nfc(review.site),
+                review.recording or "",
+                nfc(label),
+                _seconds(review.start_s),
+                _seconds(review.end_s),
+            ]
+            self.backend.append_csv_row(self.path, row, ANNOTATION_COLUMNS)
+            self.state.rows += 1
+            if not review.recording:
+                self.state.rows_without_recording += 1
 
 
 def segment_bounds(duration: float | None, det_start: float | None,

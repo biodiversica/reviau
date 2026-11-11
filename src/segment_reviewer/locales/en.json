@@ -15,7 +15,8 @@
     "segment": "Segment <b>{index}</b> of <b>{total}</b>",
     "done": "✔  All segments have been reviewed.",
     "empty": "No segments waiting for review in this folder.",
-    "counts": "{pending} pending · {true} true · {false} false · {multi} multi"
+    "counts": "{pending} pending · {correct} correct · {wrong} wrong · {unsure} unsure",
+    "labelled": " · {labelled} labelled"
   },
   "meta_row": {
     "score": "score",
@@ -23,7 +24,8 @@
     "date": "date",
     "folder": "folder",
     "extra": "extra",
-    "no_label": "no label"
+    "no_label": "no label",
+    "predicted": "predicted"
   },
   "spec": {
     "type": "Type:",
@@ -39,9 +41,18 @@
   },
   "nav": {
     "prev": "← Prev",
-    "true": "✔  True",
-    "false": "✘  False",
-    "next": "Next →"
+    "true": "✔  Correct",
+    "false": "✘  Wrong",
+    "unsure": "?  Unsure",
+    "next": "Next →",
+    "true_hint": "The prediction is in the clip — saved with any other label selected (T)",
+    "false_hint": "The prediction is not in the clip — saved as the labels selected, or as nothing on the list (F)",
+    "unsure_hint": "Cannot tell — filed apart and left out of the counts (U)",
+    "true_plus": "✔  Correct + {labels}",
+    "false_to": "✘  Wrong → {labels}",
+    "false_none": "✘  Wrong · nothing on the list",
+    "save_labels": "✔  Save: {labels}",
+    "save_none": "✔  Save · nothing on the list"
   },
   "labels": {
     "row": "Labels:",
@@ -55,7 +66,9 @@
     "saved_to": "List saved to {path}",
     "not_saved": "List not saved: {error}",
     "session_only": "List kept for this session only.",
-    "unknown": "unknown"
+    "others": "Anything else in this clip — or what it really is? Click to toggle:",
+    "predicted_tag": "◆ predicted",
+    "predicted_hint": "The model's prediction — answer it with Correct or Wrong"
   },
   "annotations": {
     "label": "Annotation table",
@@ -70,11 +83,12 @@
     "title": "Keyboard shortcuts",
     "prev": "Previous segment",
     "next": "Next segment",
-    "true": "Mark as true",
-    "false": "Mark as false",
+    "true": "Predicted label is correct",
+    "false": "Predicted label is wrong",
     "play": "Play / pause audio",
     "close": "Close",
-    "labels": "Toggle the 1st…9th label"
+    "labels": "Toggle the 1st…9th label",
+    "unsure": "Unsure"
   },
   "errors": {
     "network": "Could not reach the reviewer server.",
@@ -84,9 +98,11 @@
     "folder": "Segments folder",
     "output": "Reviewed to",
     "pending": "Pending review",
-    "already_true": "Already true",
-    "already_false": "Already false",
-    "already_multi": "Already multi",
+    "already_correct": "Already correct",
+    "already_wrong": "Already wrong",
+    "already_unsure": "Already unsure",
+    "already_labelled": "Already labelled",
+    "review_log": "Review log",
     "labels": "Label list",
     "labels_none": "none (free text only)",
     "multi": "Multiple labels",
@@ -96,7 +112,6 @@
     "spec_type": "Spectrogram type",
     "freq_range": "Freq range",
     "db_floor": "dB floor",
-    "verdict_dirs": "Verdict folders",
     "serving": "Reviewer running at",
     "network_hint": "Reachable from other machines on this network / Tailscale.",
     "token_hint": "Access token required — open the URL above, it already carries the token.",

@@ -32,7 +32,7 @@ def test_translations_endpoint(client):
     api, _ = client
     data = api.get("/api/i18n/pt-BR").json()
     assert data["lang"] == "pt-BR"
-    assert data["bundle"]["nav"]["true"].endswith("Verdadeiro")
+    assert data["bundle"]["nav"]["true"].endswith("Correto")
     # An unknown tag falls back rather than failing.
     assert api.get("/api/i18n/xx").json()["lang"] == "en"
 
@@ -44,19 +44,42 @@ def test_navigation(client):
     assert api.post("/api/nav", json={"index": 2}).json()["segment"]["index"] == 2
 
 
-def test_verdict_moves_the_file(client, segments_dir):
+ON_SCREEN = "POCA/BOAALB/POCA_20240116_190000_40.0_45.0_det3.wav"
+
+
+def test_a_review_moves_the_file_and_reports_the_outcome(client, segments_dir):
     api, _ = client
-    data = api.post("/api/verdict", json={"verdict": "true"}).json()
+    data = api.post("/api/review", json={"relpath": ON_SCREEN, "labels": ["BOAALB"]}).json()
+    assert data["outcome"] == "correct"
     assert data["counts"]["pending"] == 2
-    assert data["counts"]["true"] == 1
-    # The clip keeps the path it had, under true/.
-    assert data["moved"] == "true/POCA/BOAALB/POCA_20240116_190000_40.0_45.0_det3.wav"
+    assert data["counts"]["correct"] == 1
+    assert data["moved"] == f"correct/{ON_SCREEN}"
     assert (segments_dir / data["moved"]).exists()
+    assert data["review_log"]["rows"] == 1
 
 
-def test_unknown_verdict_is_rejected(client):
+def test_the_outcome_is_worked_out_on_the_server(client):
+    """No verdict is sent: leaving the prediction out of the labels is what
+    makes the clip wrong."""
     api, _ = client
-    assert api.post("/api/verdict", json={"verdict": "maybe"}).status_code == 400
+    data = api.post("/api/review", json={"relpath": ON_SCREEN, "labels": ["TURDRU"]}).json()
+    assert data["outcome"] == "wrong"
+    assert data["moved"].startswith("wrong/POCA/BOAALB/")
+
+
+def test_unsure_over_http(client):
+    api, _ = client
+    data = api.post("/api/review", json={"relpath": ON_SCREEN, "unsure": True}).json()
+    assert data["outcome"] == "unsure"
+    assert data["counts"]["unsure"] == 1
+
+
+def test_a_review_of_a_clip_no_longer_on_screen_is_a_conflict(client, segments_dir):
+    api, _ = client
+    res = api.post("/api/review", json={"relpath": "PONTO_A/BOAALB/gone.wav",
+                                        "labels": ["BOAALB"]})
+    assert res.status_code == 409
+    assert (segments_dir / ON_SCREEN).exists()
 
 
 def test_audio_supports_range_requests(client):
@@ -147,3 +170,18 @@ def test_replacing_the_list_from_the_gui(client):
 def test_multi_label_is_advertised_as_on(client):
     api, _ = client
     assert api.get("/api/bootstrap").json()["multi_label"] is True
+
+
+def test_two_labels_are_refused_when_multi_label_is_off(segments_dir):
+    session = make_session(segments_dir, multi_label=False)
+    api = TestClient(create_app(session, session.config, token=None))
+    res = api.post("/api/review", json={"labels": ["BOAALB", "PHYLUT"]})
+    assert res.status_code == 400
+
+
+def test_the_client_scripts_are_revalidated_on_every_load(client):
+    """A cached app.js outliving an upgrade calls endpoints that are gone."""
+    api, _ = client
+    for path in ("/static/app.js", "/static/lib.js", "/static/styles.css"):
+        assert api.get(path).headers["cache-control"] == "no-cache", path
+

@@ -61,16 +61,16 @@ def test_a_full_review_over_ssh(remote):
     session = ReviewSession(backend, ReviewConfig(save_annotations=True))
     assert session.counts()["pending"] == 3
 
-    session.apply_verdict("true")
-    session.apply_verdict("false", ["TURDRU"])
-    session.apply_verdict("true", ["BOAALB", "PHYLUT"])
+    session.review(["BOAALB"])                  # POCA/BOAALB: correct
+    session.review(["TURDRU"])                  # PONTO_A/BOAALB: wrong
+    session.review(["BOAALB", "PHYLUT"])        # PONTO_A/PHYLUT: correct, + BOAALB
 
-    assert session.counts() == {"pending": 0, "true": 1, "false": 1, "multi": 1}
-    # Folder-derived labels: the clip keeps its path, with the label folder
-    # swapped for the one confirmed.
-    assert (segments_dir / "true" / "POCA" / "BOAALB").is_dir()
-    assert len(list((segments_dir / "false").rglob("TURDRU/*.wav"))) == 1
-    assert len(list((segments_dir / "multi").rglob("*.wav"))) == 1
+    assert session.counts() == {"pending": 0, "correct": 2, "wrong": 1,
+                                "unsure": 0, "labelled": 0}
+    # Filed under the outcome, then the path the clip had, prediction included.
+    assert (segments_dir / "correct" / "POCA" / "BOAALB").is_dir()
+    assert len(list((segments_dir / "wrong" / "PONTO_A" / "BOAALB").glob("*.wav"))) == 1
+    assert len(list((segments_dir / "correct" / "PONTO_A" / "PHYLUT").glob("*.wav"))) == 1
 
     # The folders the clips came from empty out over SSH too; the root stays.
     assert not (segments_dir / "PONTO_A").exists()
@@ -78,7 +78,9 @@ def test_a_full_review_over_ssh(remote):
     assert (segments_dir / "segment_sources.csv").exists()
 
     rows = list(csv.DictReader((segments_dir / "annotations.csv").open()))
-    assert len(rows) == 4        # the multi-label clip contributes two rows
+    assert len(rows) == 4        # the two-species clip contributes two rows
+    log = list(csv.DictReader((segments_dir / "reviews.csv").open()))
+    assert [r["outcome"] for r in log] == ["correct", "wrong", "correct"]
     assert session.view() is None
 
 

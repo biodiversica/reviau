@@ -15,7 +15,8 @@
     "segment": "Segmento <b>{index}</b> de <b>{total}</b>",
     "done": "✔  Todos os segmentos foram revisados.",
     "empty": "Nenhum segmento aguardando revisão nesta pasta.",
-    "counts": "{pending} pendente(s) · {true} verdadeiro(s) · {false} falso(s) · {multi} múltiplo(s)"
+    "counts": "{pending} pendente(s) · {correct} correto(s) · {wrong} errado(s) · {unsure} incerto(s)",
+    "labelled": " · {labelled} rotulado(s)"
   },
   "meta_row": {
     "score": "escore",
@@ -23,7 +24,8 @@
     "date": "data",
     "folder": "pasta",
     "extra": "extra",
-    "no_label": "sem rótulo"
+    "no_label": "sem rótulo",
+    "predicted": "previsto"
   },
   "spec": {
     "type": "Tipo:",
@@ -39,9 +41,18 @@
   },
   "nav": {
     "prev": "← Anterior",
-    "true": "✔  Verdadeiro",
-    "false": "✘  Falso",
-    "next": "Próximo →"
+    "true": "✔  Correto",
+    "false": "✘  Errado",
+    "unsure": "?  Incerto",
+    "next": "Próximo →",
+    "true_hint": "A previsão está no clipe — salvo junto com qualquer outro rótulo marcado (T)",
+    "false_hint": "A previsão não está no clipe — salvo com os rótulos marcados, ou como nada da lista (F)",
+    "unsure_hint": "Não dá para dizer — guardado à parte e fora das contagens (U)",
+    "true_plus": "✔  Correto + {labels}",
+    "false_to": "✘  Errado → {labels}",
+    "false_none": "✘  Errado · nada da lista",
+    "save_labels": "✔  Salvar: {labels}",
+    "save_none": "✔  Salvar · nada da lista"
   },
   "labels": {
     "row": "Rótulos:",
@@ -55,7 +66,9 @@
     "saved_to": "Lista salva em {path}",
     "not_saved": "Lista não salva: {error}",
     "session_only": "Lista mantida só nesta sessão.",
-    "unknown": "desconhecido"
+    "others": "Há mais alguma coisa neste clipe — ou o que ele realmente é? Clique para marcar:",
+    "predicted_tag": "◆ previsto",
+    "predicted_hint": "A previsão do modelo — responda com Correto ou Errado"
   },
   "annotations": {
     "label": "Tabela de anotações",
@@ -70,11 +83,12 @@
     "title": "Atalhos de teclado",
     "prev": "Segmento anterior",
     "next": "Próximo segmento",
-    "true": "Marcar como verdadeiro",
-    "false": "Marcar como falso",
+    "true": "Rótulo previsto está correto",
+    "false": "Rótulo previsto está errado",
     "play": "Tocar / pausar o áudio",
     "close": "Fechar",
-    "labels": "Marcar o 1º…9º rótulo"
+    "labels": "Marcar o 1º…9º rótulo",
+    "unsure": "Incerto"
   },
   "errors": {
     "network": "Não foi possível falar com o servidor do revisor.",
@@ -84,9 +98,11 @@
     "folder": "Pasta de segmentos",
     "output": "Revisados vão para",
     "pending": "Pendentes de revisão",
-    "already_true": "Já verdadeiros",
-    "already_false": "Já falsos",
-    "already_multi": "Já múltiplos",
+    "already_correct": "Já corretos",
+    "already_wrong": "Já errados",
+    "already_unsure": "Já incertos",
+    "already_labelled": "Já rotulados",
+    "review_log": "Registro da revisão",
     "labels": "Lista de rótulos",
     "labels_none": "nenhuma (só texto livre)",
     "multi": "Múltiplos rótulos",
@@ -96,7 +112,6 @@
     "spec_type": "Tipo de espectrograma",
     "freq_range": "Faixa de frequência",
     "db_floor": "Valor mínimo em dB",
-    "verdict_dirs": "Pastas de veredito",
     "serving": "Revisor rodando em",
     "network_hint": "Acessível de outras máquinas nesta rede / Tailscale.",
     "token_hint": "É preciso token de acesso — abra a URL acima, ela já leva o token.",

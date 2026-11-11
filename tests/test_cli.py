@@ -53,7 +53,7 @@ def test_the_documented_options_are_all_accepted():
                  "--datetime-format", "--multi-label", "--no-multi-label",
                  "--labels-file", "--no-labels-file", "--annotations",
                  "--annotations-path", "--spec-type", "--fmin", "--fmax",
-                 "--db-floor", "--true-dir", "--false-dir", "--multi-dir",
+                 "--db-floor", "--output",
                  "--host", "--port", "--token", "--no-auth", "--open", "--no-open",
                  "--ssh-user", "--ssh-port", "--ssh-key", "--ssh-password",
                  "--known-hosts", "--accept-new-host-key", "--cache-dir",

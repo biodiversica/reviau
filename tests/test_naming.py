@@ -185,13 +185,6 @@ def test_a_template_must_match_the_whole_name():
     assert info.site is None and info.recorded_at is None
 
 
-def test_a_template_rewrites_the_label_it_captured():
-    parser = SegmentParser("[site]_YYYYMMDD_HHMMSS_[label]_[score]", label_from="filename")
-    assert parser.replace_label("POCA_20240116_190000_BOAALB_0.655.wav", ["TURDRU"]) == (
-        "POCA_20240116_190000_TURDRU_0.655.wav"
-    )
-
-
 def test_an_unknown_placeholder_is_rejected():
     with pytest.raises(ValueError, match="unknown placeholder"):
         SegmentParser("[site]_[speceis]")
@@ -226,27 +219,6 @@ def test_a_datetime_that_does_not_fit_the_format_is_dropped_not_fatal():
     info = parser.parse(f"{ROOT}/x/S_99999999_999999_1.0_2.0.wav", ROOT)
     assert info.recorded_at is None
     assert (info.det_start, info.det_end) == (1.0, 2.0)
-
-
-# ── rewriting names ──────────────────────────────────────────────────────────
-def test_replace_label_rewrites_a_name_that_carries_one(vs):
-    out = vs.replace_label("S_20240115_053000_1.0-6.0s_0.873_BOAALB.wav", ["TURDRU"])
-    assert out == "S_20240115_053000_1.0-6.0s_0.873_TURDRU.wav"
-
-
-def test_replace_label_appends_every_label(vs):
-    out = vs.replace_label("S_20240115_053000_1.0-6.0s_0.873_BOAALB.wav", ["BOAALB", "PHYLUT"])
-    assert out == "S_20240115_053000_1.0-6.0s_0.873_BOAALB_PHYLUT.wav"
-
-
-def test_replace_label_leaves_a_folder_labelled_name_alone(parser):
-    name = "PONTO_A_20240115_053000_12.0_17.0_det1.wav"
-    assert parser.replace_label(name, ["TURDRU"]) == name
-
-
-def test_replace_label_with_no_labels_changes_nothing(vs):
-    name = "S_20240115_053000_1.0-6.0s_0.873_BOAALB.wav"
-    assert vs.replace_label(name, []) == name
 
 
 # ── small helpers ────────────────────────────────────────────────────────────

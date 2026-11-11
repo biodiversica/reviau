@@ -19,7 +19,7 @@
     btnAddLabel: $('btn-add-label'), btnManage: $('btn-manage'),
     labelsNote: $('labels-note'),
     navRow: $('nav-row'), btnPrev: $('btn-prev'), btnTrue: $('btn-true'),
-    btnFalse: $('btn-false'), btnNext: $('btn-next'),
+    btnFalse: $('btn-false'), btnUnsure: $('btn-unsure'), btnNext: $('btn-next'),
 
     specType: $('spec-type'), specFmin: $('spec-fmin'), specFmax: $('spec-fmax'),
     specDb: $('spec-db'),
@@ -71,26 +71,47 @@
   const post = (path, body) => api(path, { method: 'POST', body: JSON.stringify(body || {}) });
 
   // ── label helpers ─────────────────────────────────────────────────────────
-  const { splitLabels, spectrogramUrl, audioUrl, toggleLabel, buttonLabels } = window.SegRev;
+  const {
+    splitLabels, spectrogramUrl, audioUrl, toggleLabel, buttonLabels, reviewLabels,
+  } = window.SegRev;
 
   // ── the label panel ───────────────────────────────────────────────────────
+  /** The segment's own label: the model's prediction, or '' when it has none. */
+  const predicted = () => (app.state.segment && app.state.segment.label) || '';
+
+  /** Chips on screen, in a stable order so 1…9 always hit the same label. */
+  const chipLabels = () => {
+    const p = predicted();
+    return buttonLabels(app.state.labels, (p ? [p] : []).concat(app.selection));
+  };
+
   function renderLabels() {
-    const labels = buttonLabels(app.state.labels, app.selection);
-    el.labelsTitle.textContent = t('labels.selected');
+    const labels = chipLabels();
+    const p = predicted();
+    el.labelsTitle.textContent = t(p ? 'labels.others' : 'labels.selected');
     el.labelsPanel.classList.toggle('managing', app.managing);
     el.btnManage.classList.toggle('active', app.managing);
     el.btnManage.title = t(app.managing ? 'labels.manage_on' : 'labels.manage');
 
     el.labelButtons.innerHTML = '';
     labels.forEach((label, i) => {
+      const isPrediction = label === p;
       const chip = document.createElement('span');
-      chip.className = 'chip' + (app.selection.includes(label) ? ' on' : '');
+      chip.className = 'chip'
+        + (app.selection.includes(label) ? ' on' : '')
+        + (isPrediction ? ' predicted' : '');
 
       const pick = document.createElement('button');
       pick.type = 'button';
       pick.className = 'chip-pick';
       // The first nine get a number, matching the 1…9 keyboard shortcuts.
-      pick.innerHTML = (i < 9 ? `<kbd>${i + 1}</kbd>` : '') + escapeHtml(label);
+      pick.innerHTML = (i < 9 ? `<kbd>${i + 1}</kbd>` : '') + escapeHtml(label)
+        + (isPrediction ? ` <span class="chip-tag">${t('labels.predicted_tag')}</span>` : '');
+      // The prediction is answered by Correct / Wrong, never by its chip: a
+      // chip that could be lit while Wrong is pressed is the contradiction
+      // this layout exists to rule out.
+      pick.disabled = isPrediction;
+      if (isPrediction) pick.title = t('labels.predicted_hint');
       pick.addEventListener('click', () => pickLabel(label));
       chip.appendChild(pick);
 
@@ -108,6 +129,28 @@
       el.labelButtons.innerHTML = `<span class="hint">${t('labels.empty')}</span>`;
     }
     renderLabelsNote();
+    renderButtons();
+  }
+
+  /** Name, on each button, exactly what pressing it will save. */
+  function renderButtons() {
+    const p = predicted();
+    const list = (xs) => xs.map(escapeHtml).join(', ');
+    el.btnFalse.classList.toggle('hidden', !p);
+    if (!p) {
+      // Nothing was predicted, so there is nothing to be right or wrong about:
+      // one button saves what is selected.
+      const chosen = reviewLabels('correct', app.selection, p, !app.multi);
+      el.btnTrue.innerHTML = chosen.length
+        ? t('nav.save_labels', { labels: list(chosen) }) : t('nav.save_none');
+      return;
+    }
+    const extra = reviewLabels('correct', app.selection, p, !app.multi).filter((x) => x !== p);
+    el.btnTrue.innerHTML = extra.length
+      ? t('nav.true_plus', { labels: list(extra) }) : t('nav.true');
+    const really = reviewLabels('wrong', app.selection, p, !app.multi);
+    el.btnFalse.innerHTML = really.length
+      ? t('nav.false_to', { labels: list(really) }) : t('nav.false_none');
   }
 
   function renderLabelsNote() {
@@ -125,6 +168,7 @@
   }
 
   function pickLabel(label) {
+    if (label === predicted()) return;   // answered by Correct / Wrong instead
     // One label at a time unless multi-label is on.
     app.selection = toggleLabel(app.selection, label, !app.multi);
     renderLabels();
@@ -197,7 +241,7 @@
     // Only what this segment actually carries: a collection named by another
     // convention simply shows fewer facts rather than a row of question marks.
     const bits = [seg.label
-      ? `<b>${escapeHtml(seg.label)}</b>`
+      ? `${t('meta_row.predicted')}: <b>${escapeHtml(seg.label)}</b>`
       : `<i>${t('meta_row.no_label')}</i>`];
     const add = (key, value) => {
       if (value !== null && value !== undefined && value !== '') {
@@ -215,8 +259,9 @@
   function renderCounts() {
     const c = app.state.counts || {};
     el.counts.textContent = t('progress.counts', {
-      pending: c.pending ?? 0, true: c.true ?? 0, false: c.false ?? 0, multi: c.multi ?? 0,
-    });
+      pending: c.pending ?? 0, correct: c.correct ?? 0, wrong: c.wrong ?? 0,
+      unsure: c.unsure ?? 0,
+    }) + (c.labelled ? t('progress.labelled', { labelled: c.labelled }) : '');
   }
 
   function renderAnnotations(final) {
@@ -255,7 +300,8 @@
 
     if (!seg) {
       // Hide the viewer rather than leaving an empty frame in place.
-      const done = (app.state.counts.true || app.state.counts.false || app.state.counts.multi);
+      const c = app.state.counts || {};
+      const done = (c.correct || c.wrong || c.unsure || c.labelled);
       el.progress.className = 'progress done';
       el.progress.innerHTML = done ? t('progress.done') : t('progress.empty');
       el.meta.textContent = '';
@@ -280,9 +326,11 @@
     renderAnnotations(false);
 
     if (!keepSelection) {
-      // Start from the label the segment already carries: accepting it is then
-      // a single click, and only a correction or a second species needs more.
-      app.selection = seg.label ? [seg.label] : [];
+      // Every segment starts with nothing selected. The prediction is the
+      // question Correct / Wrong answer, not a chip that is already lit — so a
+      // reviewer who presses Wrong without touching anything saves "nothing on
+      // the list", never a label carried over from what was on screen before.
+      app.selection = [];
     }
     el.labelsPanel.classList.remove('hidden');
     el.navRow.classList.remove('hidden');
@@ -311,28 +359,35 @@
 
   const nav = (delta) => run(() => post('/api/nav', { delta }));
 
-  /** The labels to file the current segment under.
-
-   * The buttons are the whole answer for both verdicts: whatever is selected is
-   * what the clip is labelled, and True or False only decides which folder it
-   * lands in. Clearing the selection is how a rejection says "not this, and I
-   * cannot say what it is".
-   */
-  function chosenLabels(kind) {
-    if (app.selection.length) return app.selection.slice();
+  /** File the segment on screen, as the button *kind* reads the selection. */
+  async function review(kind) {
     const seg = app.state.segment;
-    if (kind === 'false') return [t('labels.unknown')];
-    return seg && seg.label ? [seg.label] : [];
+    if (!seg || app.busy) return;
+    const labels = reviewLabels(kind, app.selection, seg.label, !app.multi);
+    app.busy = true;
+    try {
+      app.state = await post('/api/review', {
+        relpath: seg.relpath, labels, unsure: kind === 'unsure',
+      });
+      render();
+    } catch (err) {
+      el.error.textContent = err.message || t('errors.network');
+      // The clip on screen may no longer be the server's current one (another
+      // tab, a rescan): show what the server has now, keeping the message.
+      try {
+        const message = el.error.textContent;
+        app.state = await api('/api/state');
+        render();
+        el.error.textContent = message;
+      } catch (_) { /* keep the first error */ }
+    } finally {
+      app.busy = false;
+    }
   }
 
-  function verdict(kind) {
-    if (!app.state.segment) return;
-    const labels = chosenLabels(kind);
-    return run(() => post('/api/verdict', { verdict: kind, labels }));
-  }
-
-  const markTrue = () => verdict('true');
-  const markFalse = () => verdict('false');
+  const markCorrect = () => review('correct');
+  const markWrong = () => review('wrong');
+  const markUnsure = () => review('unsure');
 
   async function setLanguage(code, { persist = true } = {}) {
     const data = await api(`/api/i18n/${encodeURIComponent(code)}`);
@@ -347,8 +402,9 @@
   // ── wiring ────────────────────────────────────────────────────────────────
   el.btnPrev.addEventListener('click', () => nav(-1));
   el.btnNext.addEventListener('click', () => nav(+1));
-  el.btnTrue.addEventListener('click', markTrue);
-  el.btnFalse.addEventListener('click', markFalse);
+  el.btnTrue.addEventListener('click', markCorrect);
+  el.btnFalse.addEventListener('click', markWrong);
+  el.btnUnsure.addEventListener('click', markUnsure);
   el.btnRescan.addEventListener('click', () => run(() => post('/api/rescan')));
   el.btnHelp.addEventListener('click', () => el.help.showModal());
 
@@ -385,16 +441,16 @@
     }
     // 1…9 toggle the first nine labels, which is the whole point of the buttons.
     if (/^[1-9]$/.test(e.key)) {
-      const labels = buttonLabels(app.state.labels, app.selection);
-      const label = labels[Number(e.key) - 1];
+      const label = chipLabels()[Number(e.key) - 1];
       if (label) { e.preventDefault(); pickLabel(label); }
       return;
     }
     const keys = {
       ArrowLeft: () => nav(-1),
       ArrowRight: () => nav(+1),
-      t: markTrue, T: markTrue,
-      f: markFalse, F: markFalse,
+      t: markCorrect, T: markCorrect,
+      f: markWrong, F: markWrong,
+      u: markUnsure, U: markUnsure,
     };
     const action = keys[e.key];
     if (action) { e.preventDefault(); action(); }

@@ -12,7 +12,8 @@ from pydantic import BaseModel
 
 from . import __version__, i18n
 from .config import ReviewConfig
-from .review import ReviewSession
+from .outcome import OUTCOMES
+from .review import ReviewSession, StaleSegment
 from .spectrogram import SPEC_TYPES, SpectrogramError
 
 WEB_DIR = Path(__file__).parent / "web"
@@ -20,9 +21,16 @@ TOKEN_COOKIE = "segrev_token"
 TOKEN_HEADER = "x-segrev-token"
 
 
-class VerdictBody(BaseModel):
-    verdict: str
-    labels: list[str] | None = None
+class ReviewBody(BaseModel):
+    """What the reviewer heard in the clip on screen.
+
+    No verdict is sent: whether the prediction was right follows from *labels*
+    and the clip's own label, worked out on the server in one place.
+    """
+
+    relpath: str | None = None
+    labels: list[str] = []
+    unsure: bool = False
 
 
 class NavBody(BaseModel):
@@ -70,6 +78,7 @@ def _state_payload(session: ReviewSession) -> dict:
         "labels": session.label_choices(),
         "label_store": _labels_payload(session),
         "annotations": _annotation_payload(session),
+        "review_log": {"path": session.log.path, "rows": session.log.rows},
     }
 
 
@@ -129,6 +138,12 @@ def create_app(session: ReviewSession, config: ReviewConfig,
     async def _guard(request: Request, call_next):
         if request.url.path.startswith("/health") or _authorized(request):
             response = await call_next(request)
+            if request.url.path.startswith("/static/"):
+                # Revalidate on every load (a cheap 304 when unchanged). Without
+                # it a browser keeps a heuristically "fresh" app.js for days, and
+                # after an upgrade the new page runs the old script against an
+                # API that no longer has the endpoints it calls.
+                response.headers["Cache-Control"] = "no-cache"
             if token and request.query_params.get("token") == token:
                 response.set_cookie(
                     TOKEN_COOKIE, token, httponly=True, samesite="lax", path="/"
@@ -167,7 +182,7 @@ def create_app(session: ReviewSession, config: ReviewConfig,
             "languages": i18n.language_names(),
             "lang": config.lang,
             "multi_label": config.multi_label,
-            "verdict_dirs": session.dirs,
+            "outcomes": list(OUTCOMES),
             "spec_defaults": {
                 "type": config.spec_type,
                 "fmin": config.freq_min_hz,
@@ -214,15 +229,17 @@ def create_app(session: ReviewSession, config: ReviewConfig,
             session.labels.remove(body.remove)
         return {**_labels_payload(session), "state": _state_payload(session)}
 
-    @app.post("/api/verdict")
-    async def verdict(body: VerdictBody):
+    @app.post("/api/review")
+    async def review(body: ReviewBody):
         try:
-            result = session.apply_verdict(body.verdict, body.labels)
+            result = session.review(body.labels, unsure=body.unsure, relpath=body.relpath)
+        except StaleSegment as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except Exception as exc:  # noqa: BLE001 - shown to the reviewer verbatim
             raise HTTPException(status_code=500, detail=str(exc)) from exc
-        return {**_state_payload(session), "moved": result.get("moved")}
+        return {**_state_payload(session), **result}
 
     @app.get("/api/spectrogram")
     async def spectrogram(

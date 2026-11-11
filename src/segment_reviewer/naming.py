@@ -321,34 +321,24 @@ class SegmentParser:
         """Underscores in a captured name stand in for spaces."""
         return nfc(value).replace("_", " ").strip() if value else None
 
-    # ── writing ──────────────────────────────────────────────────────────────
-    def replace_label(self, filename: str, labels: list[str]) -> str:
-        """Rewrite a file name so it carries the labels the reviewer settled on.
-
-        Only meaningful when the pattern captures a ``label`` group: the span it
-        matched is replaced, so a segment corrected to ``TURDRU`` is saved as
-        ``..._TURDRU.wav`` and one given two labels as ``..._BOAALB_PHYLUT.wav``.
-        A name whose pattern carries no label is returned unchanged — there the
-        label lives in the folder, and the file name is left as extraction wrote it.
-        """
-        stem, ext = posixpath.splitext(filename)
-        safe = [slug(x) for x in labels if str(x).strip()]
-        if not safe:
-            return filename
-        for regex in self.regexes:
-            match = regex.search(stem)
-            if not match or "label" not in (match.groupdict() or {}):
-                continue
-            if match.group("label") is None:
-                continue
-            start, end = match.span("label")
-            return stem[:start] + "_".join(safe) + stem[end:] + ext
-        return filename
 
 
 def slug(label: str) -> str:
     """Label as it is written into a file or folder name."""
     return str(label).strip().replace(" ", "_").replace("/", "-").replace("\\", "-")
+
+
+def with_labels(filename: str, labels) -> str:
+    """*filename* with *labels* appended to its stem: ``x.wav`` → ``x_TURDRU.wav``.
+
+    Several labels are appended in the order given (``x_TURDRU_PHYLUT.wav``);
+    with none, the name is returned unchanged.
+    """
+    safe = [slug(x) for x in labels or () if str(x).strip()]
+    if not safe:
+        return filename
+    stem, ext = posixpath.splitext(filename)
+    return "_".join([stem, *safe]) + ext
 
 
 def split_labels(text: str, fallback: str = "") -> list[str]:
