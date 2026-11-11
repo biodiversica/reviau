@@ -29,6 +29,7 @@
     specType: $('spec-type'), specFmin: $('spec-fmin'), specFmax: $('spec-fmax'),
     specDb: $('spec-db'),
     btnRescan: $('btn-rescan'), btnHelp: $('btn-help'), help: $('help-dialog'),
+    btnTheme: $('btn-theme'),
   };
 
   const app = {
@@ -78,8 +79,42 @@
   // ── label helpers ─────────────────────────────────────────────────────────
   const {
     splitLabels, spectrogramUrl, audioUrl, toggleLabel, buttonLabels, reviewLabels,
-    rememberFolder,
+    rememberFolder, THEME_GLYPHS, themeMode, nextTheme,
   } = window.SegRev;
+
+  // ── theme ─────────────────────────────────────────────────────────────────
+  // Nothing here names a colour: the stylesheet holds both palettes, and this
+  // only sets `data-theme` on <html> and remembers the choice. The inline
+  // script in index.html has already applied a pinned theme before the first
+  // paint; this takes over the switching.
+  const THEME_KEY = 'segrev.theme';
+  let theme = (() => {
+    try { return themeMode(localStorage.getItem(THEME_KEY)); } catch (_) { return 'system'; }
+  })();
+
+  function applyTheme(mode) {
+    if (mode === 'system') delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = mode;
+    try {
+      if (mode === 'system') localStorage.removeItem(THEME_KEY);
+      else localStorage.setItem(THEME_KEY, mode);
+    } catch (_) { /* a theme that cannot be remembered still applies now */ }
+  }
+
+  /** Label the button for the current mode; run again when the language changes. */
+  function paintTheme() {
+    const title = t(`theme.${theme}`);
+    el.btnTheme.textContent = THEME_GLYPHS[theme];
+    el.btnTheme.title = t('theme.change', { title });
+    el.btnTheme.setAttribute('aria-label', title);
+  }
+
+  el.btnTheme.addEventListener('click', () => {
+    theme = nextTheme(theme);
+    applyTheme(theme);
+    paintTheme();
+  });
+  applyTheme(theme);
 
   // ── the label panel ───────────────────────────────────────────────────────
   /** The segment's own label: the model's prediction, or '' when it has none. */
@@ -498,6 +533,7 @@
     if (persist) localStorage.setItem('segrev.lang', app.lang);
     el.lang.value = app.lang;
     applyI18n();
+    paintTheme();
     render({ reloadMedia: false, keepSelection: true });
   }
 

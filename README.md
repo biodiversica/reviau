@@ -171,6 +171,7 @@ opens on the folder box alone.
 | **✎** | Edit the label list itself: each button grows a **×** to drop it, and the box below adds a new one. Changes are saved to `labels.txt` in the segments folder. |
 | **⟳** | Re-read the folder, e.g. after more segments arrive. |
 | **Language** | Switch the interface between English and Português. |
+| **◐ / ☀ / ☾** | Theme: follow the system, light, or dark — click to cycle. A chosen theme is remembered in this browser. The spectrogram keeps its colours in both. |
 
 The prediction is the question, and Correct or Wrong is the answer; the label
 buttons only add what else is there. Nothing is ever pre-selected, so a segment

@@ -173,6 +173,7 @@ caixa de pasta.
 | **✎** | Edita a própria lista de rótulos: cada botão ganha um **×** para removê-lo, e a caixa abaixo adiciona um novo. As mudanças são salvas em `labels.txt`, na pasta de segmentos. |
 | **⟳** | Relê a pasta, por exemplo quando chegam mais segmentos. |
 | **Idioma** | Alterna a interface entre Português e Inglês. |
+| **◐ / ☀ / ☾** | Tema: segue o sistema, claro ou escuro — clique para alternar. O tema escolhido fica guardado neste navegador. O espectrograma mantém suas cores nos dois. |
 
 A previsão é a pergunta, e Correto ou Errado é a resposta; os botões de rótulo só
 acrescentam o que mais houver. Nada vem marcado, então um segmento rejeitado sem

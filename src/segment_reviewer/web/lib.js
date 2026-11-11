@@ -102,9 +102,27 @@
     return (clean ? [clean] : []).concat(rest).slice(0, max || 8);
   }
 
+  /* Light / dark theme: follow the OS, or pin one. "system" is a real third
+   * state rather than the absence of a choice — without it there is no way
+   * back to following the OS once a theme is pinned. The order is the order
+   * the header button cycles through them. */
+  const THEME_MODES = ['system', 'light', 'dark'];
+  const THEME_GLYPHS = { system: '◐', light: '☀', dark: '☾' };
+
+  /** A stored theme read back safely: anything unknown means "system". */
+  function themeMode(stored) {
+    return THEME_MODES.includes(stored) ? stored : 'system';
+  }
+
+  /** The mode after *mode*, as the header button cycles. */
+  function nextTheme(mode) {
+    return THEME_MODES[(THEME_MODES.indexOf(themeMode(mode)) + 1) % THEME_MODES.length];
+  }
+
   const lib = {
     SPEC_TYPES, splitLabels, clampInt, mediaKey,
     spectrogramUrl, audioUrl, toggleLabel, buttonLabels, reviewLabels, rememberFolder,
+    THEME_MODES, THEME_GLYPHS, themeMode, nextTheme,
   };
   if (typeof module === 'object' && module.exports) module.exports = lib;
   else root.SegRev = lib;

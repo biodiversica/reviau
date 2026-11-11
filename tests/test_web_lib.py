@@ -189,3 +189,17 @@ def test_the_folder_just_opened_goes_first_in_the_recent_list():
     """)
     assert out == {"fresh": ["/a"], "moved": ["/a", "/b", "/c"],
                    "capped": ["/a", "/b", "/c"], "blank": ["/b"]}
+
+
+@node
+def test_the_theme_button_cycles_system_light_dark():
+    out = run("""
+      console.log(JSON.stringify({
+        order: [lib.nextTheme('system'), lib.nextTheme('light'), lib.nextTheme('dark')],
+        junk: lib.themeMode('purple'), missing: lib.themeMode(null),
+        fromJunk: lib.nextTheme('purple'),
+        glyphs: lib.THEME_MODES.map((m) => lib.THEME_GLYPHS[m]),
+      }));
+    """)
+    assert out == {"order": ["light", "dark", "system"], "junk": "system",
+                   "missing": "system", "fromJunk": "light", "glyphs": ["◐", "☀", "☾"]}

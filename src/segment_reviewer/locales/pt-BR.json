@@ -11,6 +11,12 @@
     "rescan_hint": "Relê a pasta e refaz a lista de pendentes",
     "help": "Atalhos de teclado"
   },
+  "theme": {
+    "system": "Tema: segue o sistema",
+    "light": "Tema: claro",
+    "dark": "Tema: escuro",
+    "change": "{title}. Clique para alterar."
+  },
   "progress": {
     "segment": "Segmento <b>{index}</b> de <b>{total}</b>",
     "done": "✔  Todos os segmentos foram revisados.",

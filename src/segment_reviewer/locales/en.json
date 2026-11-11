@@ -11,6 +11,12 @@
     "rescan_hint": "Re-read the folder and rebuild the pending list",
     "help": "Keyboard shortcuts"
   },
+  "theme": {
+    "system": "Theme: follows your system",
+    "light": "Theme: light",
+    "dark": "Theme: dark",
+    "change": "{title}. Click to change."
+  },
   "progress": {
     "segment": "Segment <b>{index}</b> of <b>{total}</b>",
     "done": "✔  All segments have been reviewed.",

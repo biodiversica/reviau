@@ -5,6 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Segment Reviewer</title>
   <link rel="stylesheet" href="/static/styles.css">
+  <script>
+    // Applied before the first paint: left to app.js, which runs at the end of
+    // the page, the system theme would flash before a pinned one lands.
+    try {
+      const pinned = localStorage.getItem('segrev.theme');
+      if (pinned === 'light' || pinned === 'dark') {
+        document.documentElement.dataset.theme = pinned;
+      }
+    } catch (e) { /* storage unavailable: follow the system */ }
+  </script>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🎧</text></svg>">
 </head>
 <body>
@@ -17,6 +27,7 @@
       <span class="counts" id="counts"></span>
       <button class="icon-btn" id="btn-rescan" data-i18n-title="toolbar.rescan_hint">⟳</button>
       <button class="icon-btn" id="btn-help" data-i18n-title="toolbar.help">?</button>
+      <button class="icon-btn theme-toggle" id="btn-theme" type="button"></button>
       <select id="lang-select" data-i18n-title="toolbar.language" class="lang"></select>
     </div>
   </header>

@@ -1,31 +1,35 @@
+/* Light and dark are one palette, not two: each token names both values through
+   light-dark(), and `color-scheme` alone decides which is used. That keeps the
+   two from drifting apart as tokens are added, and it makes the native controls
+   — scrollbars, the audio player, the folder-picker dialog — follow the theme
+   as well, which redefining tokens cannot do.
+
+   The theme follows the OS until the reviewer pins one, which puts `data-theme`
+   on <html> (see the theme section of app.js). The spectrogram is drawn by the
+   server and keeps its own colours in both. */
+
 :root {
-  --bg: #f6f7f9;
-  --panel: #ffffff;
-  --ink: #1b1f24;
-  --muted: #5b6672;
-  --line: #dde2e8;
-  --ok: #1a7f47;
-  --ok-ink: #ffffff;
-  --no: #b3261e;
-  --no-ink: #ffffff;
-  --warn: #b36b00;
-  --accent: #2b5bd7;
+  color-scheme: light dark;
+
+  --bg:         light-dark(#f6f7f9, #12151a);
+  --panel:      light-dark(#ffffff, #1a1f26);
+  --ink:        light-dark(#1b1f24, #e7ebf0);
+  --muted:      light-dark(#5b6672, #9aa5b1);
+  --line:       light-dark(#dde2e8, #2b323c);
+  --ok:         light-dark(#1a7f47, #2e9e5b);
+  --ok-ink:     light-dark(#ffffff, #ffffff);
+  --no:         light-dark(#b3261e, #d3554c);
+  --no-ink:     light-dark(#ffffff, #ffffff);
+  --warn:       light-dark(#b36b00, #d9a441);
+  --warn-ink:   light-dark(#ffffff, #1b1407);
+  --accent:     light-dark(#2b5bd7, #6d9bff);
+  --accent-ink: light-dark(#ffffff, #0d1117);
+  --backdrop:   light-dark(rgba(0, 0, 0, .45), rgba(0, 0, 0, .6));
   --radius: 10px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #12151a;
-    --panel: #1a1f26;
-    --ink: #e7ebf0;
-    --muted: #9aa5b1;
-    --line: #2b323c;
-    --ok: #2e9e5b;
-    --no: #d3554c;
-    --warn: #d9a441;
-    --accent: #6d9bff;
-  }
-}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
 
 * { box-sizing: border-box; }
 
@@ -118,6 +122,10 @@ dialog.browse { width: min(640px, calc(100vw - 32px)); }
   cursor: pointer;
 }
 .icon-btn:hover { border-color: var(--accent); }
+
+/* Fixed width: the glyph changes with the mode, and the button must not
+   resize under the pointer as it is clicked through the three states. */
+.theme-toggle { width: 2.2rem; padding-left: 0; padding-right: 0; text-align: center; }
 
 /* ── main column ─────────────────────────────────────────────────────────── */
 main {
@@ -225,7 +233,7 @@ audio { width: 100%; margin-top: 4px; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 .btn.ok { background: var(--ok); border-color: var(--ok); color: var(--ok-ink); }
 .btn.no { background: var(--no); border-color: var(--no); color: var(--no-ink); }
-.btn.warn { background: var(--warn); border-color: var(--warn); color: #fff; }
+.btn.warn { background: var(--warn); border-color: var(--warn); color: var(--warn-ink); }
 
 .pick, .text {
   background: var(--panel);
@@ -267,7 +275,7 @@ dialog {
   padding: 18px 22px;
   max-width: 420px;
 }
-dialog::backdrop { background: rgba(0, 0, 0, .45); }
+dialog::backdrop { background: var(--backdrop); }
 dialog h2 { margin: 0 0 12px; font-size: 16px; }
 .keys { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0 0 14px; }
 .keys dt { margin: 0; }
@@ -373,7 +381,7 @@ kbd {
   font-size: 13px;
 }
 .icon-btn.small { padding: 3px 8px; }
-.icon-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.icon-btn.active { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 
 .labels-note { font-size: 12px; color: var(--muted); text-align: center; min-height: 1em; }
 .labels-note .bad { color: var(--no); }
