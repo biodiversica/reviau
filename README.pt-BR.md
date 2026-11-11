@@ -113,7 +113,10 @@ Python 3.10 ou mais novo. A parte de áudio (librosa, soundfile) precisa da
 ## Uso
 
 ```bash
-# Pasta local, interface nesta máquina
+# Começar sem pasta e abrir uma pelo navegador
+segment-reviewer --lang pt-BR
+
+# Abrir uma pasta local de uma vez, interface nesta máquina
 segment-reviewer ~/segmentos --lang pt-BR
 
 # Lista suspensa restrita a estes rótulos e tabela de anotações
@@ -128,6 +131,34 @@ segment-reviewer /dados/segmentos --host 0.0.0.0 --port 8765
 
 O comando imprime um resumo e a URL para abrir. Com `--host 0.0.0.0` ele também
 imprime o endereço que as outras máquinas devem usar.
+
+### Abrindo uma pasta
+
+A **caixa de pasta** no topo da página diz qual pasta de segmentos está em
+revisão. Digite outro caminho e aperte <kbd>Enter</kbd> — ou use **Procurar…**
+para navegar pelas pastas — e essa pasta é aberta no lugar da atual, sem
+reiniciar o comando. Iniciado sem a pasta `SEGMENTOS`, a página abre só com a
+caixa de pasta.
+
+- Ela aceita os mesmos caminhos da linha de comando: uma pasta local, `~/…`, ou
+  `ssh://usuario@host/caminho` para uma remota, conectada com as configurações
+  SSH da linha de comando (`--ssh-key`, `~/.ssh/config`, o agente, …).
+- Toda pasta aberta recebe as opções com que o comando foi iniciado — o padrão de
+  nome, `--label-depth`, `--output`, `--labels`, `--annotations`.
+- **Abrir uma pasta não grava nada nela.** As pastas de veredito, o registro da
+  revisão e a lista de rótulos são criados com o primeiro segmento revisado,
+  então uma pasta aberta por engano — um erro de digitação, um nível acima — fica
+  exatamente como estava. Abra a certa e siga em frente.
+- Uma pasta que não pode ser aberta é recusada com o motivo, e a revisão na tela
+  continua.
+- **Procurar…** lista as pastas da máquina onde o revisor roda — a que lê os
+  clipes, que não é a do navegador quando a interface é servida para outra
+  máquina. Pastas com clipes aparecem marcadas com ♪. Pastas remotas `ssh://` são
+  digitadas, não navegadas.
+- As pastas abertas recentemente são sugeridas enquanto você digita (guardadas
+  neste navegador).
+- Quando o padrão de nome lê poucos dos nomes da pasta recém-aberta, uma linha
+  abaixo da caixa de pasta avisa, com um nome que ficou de fora.
 
 ### No navegador
 
@@ -171,7 +202,8 @@ marcar os nove primeiros rótulos, <kbd>Espaço</kbd> para tocar ou pausar.
 
 Os rótulos disponíveis vêm de uma lista salva em **`labels.txt`**, na pasta de segmentos, um
 rótulo por linha. Na primeira vez que um conjunto é aberto, a lista é criada com
-os rótulos que o conjunto já usa, e o arquivo é gravado; a partir
+os rótulos que o conjunto já usa, e o arquivo é gravado junto com o primeiro
+segmento revisado; a partir
 daí a referência principal é este arquivo, e você o edita pela interface (ou à mão — linhas em branco e comentários com `#` são ignorados).
 
 Iniciar com `--labels` define outra coisa: só aqueles rótulos são oferecidos na
@@ -403,7 +435,10 @@ Ao ligar num endereço que não seja o loopback, um **token de acesso** é gerad
 embutido na URL impressa; abra essa URL uma vez e o token fica num cookie. Use
 `--token meusegredo` para escolher o token, ou `--no-auth` para servir sem ele.
 
-O token afasta um curioso das suas pastas; ele não é TLS. Numa rede não confiável,
+O token afasta um curioso das suas pastas; ele não é TLS. Quem o tiver pode abrir
+— e revisar, o que move clipes — qualquer pasta que o revisor consiga ler, e ver
+os nomes das pastas daquela máquina; trate-o como uma senha e pense duas vezes
+antes de usar `--no-auth` numa rede compartilhada. Numa rede não confiável,
 prefira Tailscale (ligar no endereço do Tailscale, ou em `0.0.0.0` com a máquina
 acessível só pela tailnet) ou um túnel SSH:
 
@@ -414,17 +449,20 @@ segment-reviewer /dados/segmentos --port 8765 --no-open
 ssh -N -L 8765:127.0.0.1:8765 usuario@servidor   # depois abra http://127.0.0.1:8765
 ```
 
-Um revisor por vez: a lista de pendentes e a posição atual ficam no servidor,
-então dois navegadores na mesma instância conduzem a mesma sessão.
+Um revisor por vez: a lista de pendentes, a posição atual e a pasta aberta ficam
+no servidor, então dois navegadores na mesma instância conduzem a mesma sessão —
+abrir uma pasta em um abre nos dois.
 
 ---
 
 ## Opções
 
 ```
-segment-reviewer SEGMENTOS [OPÇÕES]
+segment-reviewer [SEGMENTOS] [OPÇÕES]
 
-  SEGMENTOS                     Caminho local, ou ssh://[usuário@]host[:porta]/caminho
+  SEGMENTOS                     Pasta a abrir no início: caminho local, ou
+                                ssh://[usuário@]host[:porta]/caminho. Opcional —
+                                a pasta pode ser aberta, e trocada, no navegador
 
   -l, --lang TEXT               Idioma inicial da interface: en, pt-BR  [padrão: en]
       --labels TEXT             Os únicos rótulos oferecidos, separados por vírgulas.

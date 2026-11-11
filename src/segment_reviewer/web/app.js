@@ -10,7 +10,12 @@
 
   const $ = (id) => document.getElementById(id);
   const el = {
-    folder: $('folder'), counts: $('counts'), lang: $('lang-select'),
+    counts: $('counts'), lang: $('lang-select'),
+    folderBar: $('folder-form'), folderInput: $('folder-input'),
+    recentFolders: $('recent-folders'), btnBrowse: $('btn-browse'), notice: $('notice'),
+    browse: $('browse-dialog'), browseUp: $('browse-up'), browseHere: $('browse-here'),
+    browseList: $('browse-list'), browseError: $('browse-error'), browseWavs: $('browse-wavs'),
+    browseCancel: $('browse-cancel'), browseOpen: $('browse-open'),
     progress: $('progress'), meta: $('meta'), controls: $('controls'),
     specWrap: $('spec-wrap'), spec: $('spec'), player: $('player'),
     error: $('error'), ann: $('ann'),
@@ -73,6 +78,7 @@
   // ── label helpers ─────────────────────────────────────────────────────────
   const {
     splitLabels, spectrogramUrl, audioUrl, toggleLabel, buttonLabels, reviewLabels,
+    rememberFolder,
   } = window.SegRev;
 
   // ── the label panel ───────────────────────────────────────────────────────
@@ -258,6 +264,7 @@
 
   function renderCounts() {
     const c = app.state.counts || {};
+    if (!app.state.folder) { el.counts.textContent = ''; return; }
     el.counts.textContent = t('progress.counts', {
       pending: c.pending ?? 0, correct: c.correct ?? 0, wrong: c.wrong ?? 0,
       unsure: c.unsure ?? 0,
@@ -294,9 +301,29 @@
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
   ));
 
+  function hideViewer() {
+    el.meta.textContent = '';
+    el.controls.classList.add('hidden');
+    el.specWrap.classList.add('hidden');
+    el.player.classList.add('hidden');
+    el.player.pause();
+    el.navRow.classList.add('hidden');
+    el.labelsPanel.classList.add('hidden');
+  }
+
   function render({ reloadMedia = true, keepSelection = false } = {}) {
     const seg = app.state.segment;
     renderCounts();
+    renderFolder();
+
+    if (!app.state.folder) {
+      // Nothing open yet: the folder box is the whole page.
+      el.progress.className = 'progress done';
+      el.progress.innerHTML = t('progress.no_folder');
+      hideViewer();
+      el.ann.textContent = '';
+      return;
+    }
 
     if (!seg) {
       // Hide the viewer rather than leaving an empty frame in place.
@@ -304,14 +331,8 @@
       const done = (c.correct || c.wrong || c.unsure || c.labelled);
       el.progress.className = 'progress done';
       el.progress.innerHTML = done ? t('progress.done') : t('progress.empty');
-      el.meta.textContent = '';
       el.error.textContent = '';
-      el.controls.classList.add('hidden');
-      el.specWrap.classList.add('hidden');
-      el.player.classList.add('hidden');
-      el.player.pause();
-      el.navRow.classList.add('hidden');
-      el.labelsPanel.classList.add('hidden');
+      hideViewer();
       renderAnnotations(true);
       return;
     }
@@ -385,6 +406,87 @@
     }
   }
 
+  // ── the folder under review ───────────────────────────────────────────────
+  const recentFolders = () => {
+    try { return JSON.parse(localStorage.getItem('segrev.recent')) || []; } catch (_) { return []; }
+  };
+
+  function renderFolder() {
+    const folder = app.state.folder || '';
+    // Never overwrite what the reviewer is typing.
+    if (document.activeElement !== el.folderInput) el.folderInput.value = folder;
+    el.folderInput.title = folder || t('folder.hint');
+    el.folderBar.classList.toggle('empty', !folder);
+    el.recentFolders.innerHTML = '';
+    for (const path of recentFolders()) el.recentFolders.appendChild(new Option(path));
+  }
+
+  /** A line saying the filename pattern read few of the names just opened. */
+  function renderPattern(pattern) {
+    el.notice.textContent = '';
+    if (!pattern || !pattern.total || pattern.matched === pattern.total) return;
+    const key = pattern.matched === 0 ? 'cli.pattern_none' : 'cli.pattern_some';
+    el.notice.textContent = t(key, { matched: pattern.matched, total: pattern.total })
+      + (pattern.example ? ` ${pattern.example}` : '');
+  }
+
+  async function openFolder(path) {
+    const wanted = String(path || '').trim();
+    if (!wanted || app.busy) return;
+    app.busy = true;
+    el.folderBar.classList.add('busy');
+    try {
+      const data = await post('/api/open', { path: wanted });
+      app.state = data;
+      try {
+        localStorage.setItem('segrev.recent',
+          JSON.stringify(rememberFolder(recentFolders(), data.folder, 8)));
+      } catch (_) { /* a private window: no history, nothing else lost */ }
+      el.folderInput.blur();
+      render();
+      renderPattern(data.pattern);
+    } catch (err) {
+      // The folder under review, if any, is still open and still on screen.
+      el.error.textContent = err.message || t('errors.network');
+    } finally {
+      app.busy = false;
+      el.folderBar.classList.remove('busy');
+    }
+  }
+
+  // ── the folder picker ─────────────────────────────────────────────────────
+  async function browseTo(path) {
+    el.browseError.textContent = '';
+    try {
+      const data = await api(`/api/browse?path=${encodeURIComponent(path || '')}`);
+      app.browsing = data;
+      el.browseHere.textContent = data.path;
+      el.browseUp.disabled = !data.parent;
+      el.browseWavs.textContent = data.wavs ? t('browse.wavs_here', { count: data.wavs }) : '';
+      el.browseList.innerHTML = '';
+      for (const folder of data.folders) {
+        const li = document.createElement('li');
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = folder.name;
+        if (folder.has_wavs) button.className = 'has-wavs';
+        button.addEventListener('click', () => browseTo(folder.path));
+        li.appendChild(button);
+        el.browseList.appendChild(li);
+      }
+      if (!data.folders.length) {
+        el.browseList.innerHTML = `<li class="empty">${t('browse.empty')}</li>`;
+      }
+    } catch (err) {
+      el.browseError.textContent = err.message || t('errors.network');
+    }
+  }
+
+  function openBrowser() {
+    el.browse.showModal();
+    browseTo(el.folderInput.value.trim() || app.state.folder || '');
+  }
+
   const markCorrect = () => review('correct');
   const markWrong = () => review('wrong');
   const markUnsure = () => review('unsure');
@@ -405,7 +507,24 @@
   el.btnTrue.addEventListener('click', markCorrect);
   el.btnFalse.addEventListener('click', markWrong);
   el.btnUnsure.addEventListener('click', markUnsure);
-  el.btnRescan.addEventListener('click', () => run(() => post('/api/rescan')));
+  el.btnRescan.addEventListener('click', () => {
+    if (app.state.folder) run(() => post('/api/rescan'));
+  });
+  el.folderBar.addEventListener('submit', (e) => {
+    e.preventDefault();
+    openFolder(el.folderInput.value);
+  });
+  el.folderInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { el.folderInput.value = app.state.folder || ''; el.folderInput.blur(); }
+  });
+  el.btnBrowse.addEventListener('click', openBrowser);
+  el.browseUp.addEventListener('click', () => app.browsing && browseTo(app.browsing.parent));
+  el.browseCancel.addEventListener('click', () => el.browse.close());
+  el.browseOpen.addEventListener('click', () => {
+    const path = app.browsing && app.browsing.path;
+    el.browse.close();
+    if (path) { el.folderInput.value = path; openFolder(path); }
+  });
   el.btnHelp.addEventListener('click', () => el.help.showModal());
 
   el.btnManage.addEventListener('click', () => {
@@ -431,7 +550,8 @@
   el.lang.addEventListener('change', () => setLanguage(el.lang.value));
 
   document.addEventListener('keydown', (e) => {
-    if (e.target.matches('input, select, textarea') || el.help.open) return;
+    if (e.target.matches('input, select, textarea') || el.help.open || el.browse.open) return;
+    if (!app.state.segment) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
 
     if (e.key === ' ') {
@@ -464,9 +584,6 @@
       app.multi = boot.multi_label;
       app.state = boot.state;
 
-      el.folder.textContent = boot.folder;
-      el.folder.title = boot.folder;
-
       el.lang.innerHTML = '';
       for (const lang of boot.languages) el.lang.add(new Option(lang.name, lang.code));
 
@@ -477,7 +594,9 @@
       el.specDb.value = spec.db ?? -80;
 
       await setLanguage(localStorage.getItem('segrev.lang') || boot.lang, { persist: false });
-      loadAudio();
+      renderPattern(boot.pattern);
+      if (!app.state.folder) el.folderInput.focus();
+      else loadAudio();
     } catch (err) {
       document.body.innerHTML = `<main><div class="error">${escapeHtml(err.message)}</div></main>`;
     }

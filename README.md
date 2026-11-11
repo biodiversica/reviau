@@ -112,7 +112,10 @@ which ships with the wheels on Linux, macOS and Windows.
 ## Use
 
 ```bash
-# A local folder, GUI on this machine
+# Start with no folder and open one from the browser
+segment-reviewer
+
+# Open a local folder straight away, GUI on this machine
 segment-reviewer ~/segments
 
 # Portuguese interface, a fixed set of drop-down labels, annotation table
@@ -127,6 +130,33 @@ segment-reviewer /data/segments --host 0.0.0.0 --port 8765
 
 The command prints a summary and the URL to open. With `--host 0.0.0.0` it also
 prints the address other machines should use.
+
+### Opening a folder
+
+The **folder box** at the top of the page says which segments folder is under
+review. Type another path and press <kbd>Enter</kbd> — or **Browse…** to click
+through the folders — and that folder is opened in place of the current one,
+without restarting the command. Started without a `SEGMENTS` folder, the page
+opens on the folder box alone.
+
+- It takes the same paths the command line does: a local folder, `~/…`, or
+  `ssh://user@host/path` for a remote one, connected with the command line's SSH
+  settings (`--ssh-key`, `~/.ssh/config`, the agent, …).
+- Every folder opened gets the options the command was started with — the
+  filename pattern, `--label-depth`, `--output`, `--labels`, `--annotations`.
+- **Opening a folder writes nothing to it.** The verdict folders, the review log
+  and the label list are created with the first segment reviewed, so a folder
+  opened by mistake — a typo, a level too high — is left exactly as it was. Open
+  the right one and carry on.
+- A folder that cannot be opened is refused with the reason, and the review on
+  screen carries on.
+- **Browse…** lists the folders of the machine the reviewer runs on — the one
+  that reads the clips, which is not the browser's when the GUI is served to
+  another machine. Folders holding clips are marked ♪. Remote `ssh://` folders
+  are typed, not browsed.
+- The folders opened recently are offered as you type (kept in this browser).
+- When a filename pattern reads few of the names in the folder just opened, a
+  line under the folder box says so, with one name it missed.
 
 ### In the browser
 
@@ -168,7 +198,8 @@ the first nine labels, <kbd>Space</kbd> to play or pause.
 
 The buttons come from a list kept in **`labels.txt`** in the segments folder, one
 label per line. The first time a collection is opened the list is seeded from the
-labels the collection already uses, and written out; from then on that file *is*
+labels the collection already uses, and written out with the first segment
+reviewed; from then on that file *is*
 the list, and you edit it from the GUI (or by hand — blank lines and `#` comments
 are ignored).
 
@@ -397,7 +428,10 @@ When you bind a non-loopback address, an **access token** is generated and
 embedded in the printed URL; open that URL once and the token is stored in a
 cookie. Pass `--token mysecret` to choose it, or `--no-auth` to serve without one.
 
-The token keeps a casual passer-by out of your files; it is not TLS. On an
+The token keeps a casual passer-by out of your files; it is not TLS. Whoever
+holds it can open — and review, which moves clips — any folder the reviewer can
+read, and browse that machine's folder names, so treat it like a password and
+think twice before `--no-auth` on a shared network. On an
 untrusted network, prefer Tailscale (bind to the Tailscale address, or to
 `0.0.0.0` with the machine only reachable over the tailnet) or an SSH tunnel:
 
@@ -408,17 +442,20 @@ segment-reviewer /data/segments --port 8765 --no-open
 ssh -N -L 8765:127.0.0.1:8765 user@server   # then open http://127.0.0.1:8765
 ```
 
-One reviewer at a time: the pending list and the current position live in the
-server, so two browsers pointed at the same instance drive the same session.
+One reviewer at a time: the pending list, the current position and the folder
+open live in the server, so two browsers pointed at the same instance drive the
+same session — opening a folder in one opens it in both.
 
 ---
 
 ## Options
 
 ```
-segment-reviewer SEGMENTS [OPTIONS]
+segment-reviewer [SEGMENTS] [OPTIONS]
 
-  SEGMENTS                      Local path, or ssh://[user@]host[:port]/path
+  SEGMENTS                      Folder to open at start: a local path, or
+                                ssh://[user@]host[:port]/path. Optional — a
+                                folder can be opened, and changed, in the browser
 
   -l, --lang TEXT               Interface language at start: en, pt-BR  [default: en]
       --labels TEXT             The only labels offered, comma-separated. Replaces a

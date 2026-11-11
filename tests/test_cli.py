@@ -118,3 +118,9 @@ def test_every_spectrogram_type_is_accepted(tmp_path):
         result = runner.invoke(cli, [str(tmp_path / "nope"), "--spec-type", spec_type])
         # It gets past validation and fails on the missing folder instead.
         assert result.exit_code == 2, spec_type
+
+
+def test_the_segments_folder_is_optional():
+    """It can be opened — and changed — from the browser instead."""
+    segments = next(p for p in get_command(cli).params if p.name == "segments")
+    assert segments.required is False

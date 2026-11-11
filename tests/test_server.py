@@ -1,20 +1,24 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from conftest import make_session
+from conftest import make_workspace, write_wav
 from segment_reviewer.server import create_app
+
+
+def serve(workspace, token=None):
+    return TestClient(create_app(workspace, workspace.config, token=token))
 
 
 @pytest.fixture
 def client(segments_dir):
-    session = make_session(segments_dir, labels=["rain", "BOAALB", "PHYLUT"])
-    return TestClient(create_app(session, session.config, token=None)), session
+    workspace = make_workspace(segments_dir, labels=["rain", "BOAALB", "PHYLUT"])
+    return serve(workspace), workspace.session
 
 
 def test_bootstrap_carries_everything_the_gui_needs(client):
     api, session = client
     data = api.get("/api/bootstrap").json()
-    assert data["folder"] == session.backend.display
+    assert data["state"]["folder"] == session.backend.display
     assert {lang["code"] for lang in data["languages"]} == {"en", "pt-BR"}
     assert data["state"]["segment"]["label"] == "BOAALB"
     assert data["state"]["segment"]["folder"] == "POCA/BOAALB"
@@ -130,8 +134,7 @@ def test_spectrogram_rejects_a_bad_type(client):
 
 
 def test_token_guards_the_api(segments_dir):
-    session = make_session(segments_dir)
-    api = TestClient(create_app(session, session.config, token="s3cret"))
+    api = serve(make_workspace(segments_dir), token="s3cret")
     assert api.get("/api/state").status_code == 401
     assert api.get("/health").status_code == 200
     assert api.get("/api/state", headers={"x-segrev-token": "s3cret"}).status_code == 200
@@ -173,8 +176,7 @@ def test_multi_label_is_advertised_as_on(client):
 
 
 def test_two_labels_are_refused_when_multi_label_is_off(segments_dir):
-    session = make_session(segments_dir, multi_label=False)
-    api = TestClient(create_app(session, session.config, token=None))
+    api = serve(make_workspace(segments_dir, multi_label=False))
     res = api.post("/api/review", json={"labels": ["BOAALB", "PHYLUT"]})
     assert res.status_code == 400
 
@@ -185,3 +187,58 @@ def test_the_client_scripts_are_revalidated_on_every_load(client):
     for path in ("/static/app.js", "/static/lib.js", "/static/styles.css"):
         assert api.get(path).headers["cache-control"] == "no-cache", path
 
+
+
+# ── opening a folder from the GUI ────────────────────────────────────────────
+def test_the_gui_can_start_with_no_folder_open():
+    api = serve(make_workspace())
+    data = api.get("/api/bootstrap").json()
+    assert data["state"]["folder"] is None
+    assert data["state"]["segment"] is None
+    assert api.get("/api/state").json()["folder"] is None
+
+
+def test_clip_calls_need_a_folder_open():
+    api = serve(make_workspace())
+    assert api.post("/api/review", json={"labels": []}).status_code == 409
+    assert api.post("/api/nav", json={"delta": 1}).status_code == 409
+    assert api.post("/api/rescan").status_code == 409
+    assert api.get("/api/audio?index=0").status_code == 409
+
+
+def test_opening_a_folder_over_http(segments_dir):
+    api = serve(make_workspace())
+    data = api.post("/api/open", json={"path": str(segments_dir)}).json()
+    assert data["folder"] == str(segments_dir)
+    assert data["counts"]["pending"] == 3
+    assert data["segment"]["label"] == "BOAALB"
+    assert data["pattern"] == {"matched": 3, "total": 3, "example": ""}
+
+
+def test_switching_folders_over_http(segments_dir, tmp_path):
+    other = tmp_path / "other"
+    write_wav(other / "PHYLUT" / "S_20240101_000000_0.0_5.0.wav")
+    api = serve(make_workspace(segments_dir))
+    data = api.post("/api/open", json={"path": str(other)}).json()
+    assert data["folder"] == str(other)
+    assert data["counts"]["pending"] == 1
+    assert data["labels"] == ["PHYLUT"]
+
+
+def test_a_bad_folder_is_refused_and_the_review_carries_on(segments_dir):
+    api = serve(make_workspace(segments_dir))
+    res = api.post("/api/open", json={"path": "/no/such/folder"})
+    assert res.status_code == 400
+    assert api.get("/api/state").json()["folder"] == str(segments_dir)
+
+
+def test_browse_over_http(segments_dir):
+    api = serve(make_workspace())
+    data = api.get("/api/browse", params={"path": str(segments_dir)}).json()
+    assert [f["name"] for f in data["folders"]] == ["POCA", "PONTO_A"]
+    assert api.get("/api/browse", params={"path": "ssh://h/x"}).status_code == 400
+
+
+def test_browse_starts_in_the_open_folder(segments_dir):
+    api = serve(make_workspace(segments_dir))
+    assert api.get("/api/browse").json()["path"] == str(segments_dir)

@@ -63,7 +63,9 @@ class ReviewSession:
             label_depth=config.label_depth,
         )
         self._lock = threading.RLock()
-        self._ensure_dirs()
+        # Nothing is written on opening — no verdict folders, no label list:
+        # they are made with the first segment filed, so a folder opened by
+        # mistake from the GUI is left exactly as it was found.
         self.sources = SourceManifest(backend)
         self.log = ReviewLog(backend, backend.join(self.output_root, REVIEW_LOG))
         self.annotations = AnnotationTable(
@@ -85,12 +87,6 @@ class ReviewSession:
         )
 
     # ── setup ────────────────────────────────────────────────────────────────
-    def _ensure_dirs(self) -> None:
-        # ``labelled/`` only ever holds clips that came with no prediction, so it
-        # is made when the first one is filed rather than in every collection.
-        for name in OUTCOMES[:3]:
-            self.backend.makedirs(self.verdict_root(name))
-
     def _annotations_path(self) -> str:
         if not self.config.save_annotations:
             return self.backend.resolve(self.config.annotations_path)
@@ -332,6 +328,7 @@ class ReviewSession:
                 self.backend.move(dest, src)
                 raise
             self.segments.pop(self.index)
+            self.labels.flush()      # the folder is in use now: keep its list
             # The clip's own folder, and whatever else it was the last clip in,
             # are no longer part of the collection: a reviewed folder empties out
             # rather than leaving a shell of the tree behind.

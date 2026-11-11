@@ -175,3 +175,17 @@ def test_each_button_reads_the_selection_one_way():
         "unsure": ["TURDRU"],
         "noPrediction": ["rain"],
     }
+
+
+@node
+def test_the_folder_just_opened_goes_first_in_the_recent_list():
+    out = run("""
+      console.log(JSON.stringify({
+        fresh:  lib.rememberFolder([], '/a', 8),
+        moved:  lib.rememberFolder(['/b', '/a', '/c'], '/a', 8),
+        capped: lib.rememberFolder(['/b', '/c', '/d'], '/a', 3),
+        blank:  lib.rememberFolder(['/b'], '  ', 8),
+      }));
+    """)
+    assert out == {"fresh": ["/a"], "moved": ["/a", "/b", "/c"],
+                   "capped": ["/a", "/b", "/c"], "blank": ["/b"]}

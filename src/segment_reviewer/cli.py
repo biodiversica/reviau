@@ -28,6 +28,7 @@ from .review import ReviewSession
 from .server import create_app
 from .spectrogram import SPEC_TYPES
 from .storage import open_backend
+from .workspace import OpenError, Workspace
 
 cli = typer.Typer(
     add_completion=False,
@@ -40,7 +41,9 @@ cli = typer.Typer(
         "By default a segment's label is the folder it sits in, and its file name "
         "is read as [site]_[YYYYMMDD]_[HHMMSS]_[start]_[end]_* — both are "
         "configurable with --label-from and --filename-pattern.\n\n"
-        "SEGMENTS may be a local folder or a remote one over SSH:\n"
+        "SEGMENTS may be a local folder or a remote one over SSH, and may be left "
+        "out: the folder can be opened — and changed — from the browser.\n"
+        "  segment-reviewer\n"
         "  segment-reviewer /data/segments\n"
         "  segment-reviewer ssh://user@host/data/segments"
     ),
@@ -106,30 +109,44 @@ def _pattern_note(session: ReviewSession, t) -> str:
     return f"{note}\n  {t('cli.pattern_example', name=example)}" if example else note
 
 
-def _summary(session: ReviewSession, config: ReviewConfig, t) -> str:
-    counts = session.counts()
+def _summary(session: ReviewSession | None, config: ReviewConfig, t) -> str:
     freq = f"{config.freq_min_hz} – " + (
         "Nyquist" if config.freq_max_hz == 0 else f"{config.freq_max_hz} Hz"
     )
+    if session is None:
+        folder_rows = [(t("cli.folder"), t("cli.folder_none"))]
+    else:
+        counts = session.counts()
+        folder_rows = [
+            (t("cli.folder"), session.backend.display),
+            (t("cli.output"), session.output_root),
+            (t("cli.pending"), str(counts["pending"])),
+            (t("cli.already_correct"), str(counts["correct"])),
+            (t("cli.already_wrong"), str(counts["wrong"])),
+            (t("cli.already_unsure"), str(counts["unsure"])),
+            *([(t("cli.already_labelled"), str(counts["labelled"]))]
+              if counts["labelled"] else []),
+            (t("cli.review_log"), session.log.path),
+        ]
+    if session is not None and session.annotations.enabled:
+        annotations = session.annotations.state.path
+    elif session is None and config.save_annotations:
+        annotations = t("cli.on")
+    else:
+        annotations = t("cli.off")
     rows = [
-        (t("cli.folder"), session.backend.display),
-        (t("cli.output"), session.output_root),
-        (t("cli.pending"), str(counts["pending"])),
-        (t("cli.already_correct"), str(counts["correct"])),
-        (t("cli.already_wrong"), str(counts["wrong"])),
-        (t("cli.already_unsure"), str(counts["unsure"])),
-        *([(t("cli.already_labelled"), str(counts["labelled"]))] if counts["labelled"] else []),
-        (t("cli.review_log"), session.log.path),
+        *folder_rows,
         (t("cli.label_from"), config.label_from),
         *([(t("cli.label_depth"), str(config.label_depth))] if config.label_depth else []),
         (t("cli.pattern"), config.filename_pattern),
-        (t("cli.pattern_match"), "{} / {}".format(*session.pattern_report()[:2])),
-        (t("cli.labels"), ", ".join(session.label_choices()) or t("cli.labels_none")),
-        (t("cli.labels_file"),
-         session.labels.path if session.labels.persisted else t("cli.off")),
+        *([] if session is None else [
+            (t("cli.pattern_match"), "{} / {}".format(*session.pattern_report()[:2])),
+            (t("cli.labels"), ", ".join(session.label_choices()) or t("cli.labels_none")),
+            (t("cli.labels_file"),
+             session.labels.path if session.labels.persisted else t("cli.off")),
+        ]),
         (t("cli.multi"), t("cli.on") if config.multi_label else t("cli.off")),
-        (t("cli.annotations"),
-         session.annotations.state.path if session.annotations.enabled else t("cli.off")),
+        (t("cli.annotations"), annotations),
         (t("cli.spec_type"), config.spec_type),
         (t("cli.freq_range"), freq),
         (t("cli.db_floor"), f"{config.db_min} dB"),
@@ -140,10 +157,11 @@ def _summary(session: ReviewSession, config: ReviewConfig, t) -> str:
 
 @cli.command()
 def review(
-    segments: str = typer.Argument(
-        ...,
-        metavar="SEGMENTS",
-        help="Segments folder: a local path, or ssh://[user@]host[:port]/path.",
+    segments: Optional[str] = typer.Argument(
+        None,
+        metavar="[SEGMENTS]",
+        help="Segments folder to open at start: a local path, or "
+             "ssh://[user@]host[:port]/path. Leave it out to open one from the browser.",
     ),
     lang: str = typer.Option(
         "en", "--lang", "-l",
@@ -287,7 +305,7 @@ def review(
     t = i18n.Translator(language)
 
     config = ReviewConfig(
-        segments=segments,
+        segments=segments or "",
         lang=language,
         labels=[x.strip() for x in labels.split(",") if x.strip()],
         labels_file="" if no_labels_file else (labels_file or DEFAULT_LABELS_FILE),
@@ -306,9 +324,11 @@ def review(
         db_min=db_floor,
     )
 
-    try:
-        backend = open_backend(
-            segments,
+    def opener(spec: str):
+        # Every folder opened — here or later from the browser — connects with
+        # the SSH settings the command line was started with.
+        return open_backend(
+            spec,
             ssh_user=ssh_user,
             ssh_port=ssh_port,
             ssh_key=ssh_key,
@@ -317,29 +337,32 @@ def review(
             accept_new_host_key=accept_new_host_key,
             cache_dir=cache_dir,
         )
-    except Exception as exc:  # noqa: BLE001 - a connection or path problem, not a bug
-        typer.secho(f"Could not open {segments!r}: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=2) from exc
 
-    if not backend.isdir(backend.root):
-        typer.secho(f"Not a folder: {backend.display}", fg=typer.colors.RED, err=True)
-        backend.close()
-        raise typer.Exit(code=2)
-
-    session = ReviewSession(backend, config)
+    workspace = Workspace(config, opener)
+    pattern = None
+    if segments:
+        try:
+            pattern = workspace.open(segments).pattern
+        except OpenError as exc:
+            # A folder named on the command line was asked for explicitly: a
+            # typo there stops the run rather than opening an empty reviewer.
+            typer.secho(str(exc), fg=typer.colors.RED, err=True)
+            raise typer.Exit(code=2) from exc
+    session = workspace.session
 
     access_token: Optional[str] = None
     if not no_auth:
         access_token = token or (None if _is_loopback(host) else secrets.token_urlsafe(16))
 
-    app = create_app(session, config, access_token)
+    app = create_app(workspace, config, access_token)
+    app.state.pattern = pattern
 
     shown_host = "127.0.0.1" if host in ("0.0.0.0", "::") else host
     suffix = f"?token={access_token}" if access_token else ""
     url = f"http://{shown_host}:{port}/{suffix}"
 
     typer.echo(_summary(session, config, t))
-    note = _pattern_note(session, t)
+    note = _pattern_note(session, t) if session is not None else ""
     if note:
         typer.echo("")
         typer.secho(note, fg=typer.colors.YELLOW, err=True)
@@ -358,7 +381,7 @@ def review(
     try:
         uvicorn.run(app, host=host, port=port, log_level="warning", access_log=False)
     finally:
-        backend.close()
+        workspace.close()
 
 
 def main() -> None:

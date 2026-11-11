@@ -15,6 +15,8 @@ from .config import ReviewConfig
 from .outcome import OUTCOMES
 from .review import ReviewSession, StaleSegment
 from .spectrogram import SPEC_TYPES, SpectrogramError
+from .storage import LocalBackend
+from .workspace import OpenError, Workspace, browse
 
 WEB_DIR = Path(__file__).parent / "web"
 TOKEN_COOKIE = "segrev_token"
@@ -36,6 +38,12 @@ class ReviewBody(BaseModel):
 class NavBody(BaseModel):
     delta: int = 0
     index: int | None = None
+
+
+class OpenBody(BaseModel):
+    """A segments folder to open: a local path, or ssh://[user@]host[:port]/path."""
+
+    path: str
 
 
 class LabelsBody(BaseModel):
@@ -70,9 +78,16 @@ def _labels_payload(session: ReviewSession) -> dict:
     }
 
 
-def _state_payload(session: ReviewSession) -> dict:
+def _state_payload(workspace: Workspace) -> dict:
+    session = workspace.session
+    if session is None:
+        # No folder open yet: the GUI shows the folder box and nothing else.
+        return {"folder": None, "output": None, "segment": None, "counts": {},
+                "labels": [], "label_store": {}, "annotations": {}, "review_log": None}
     view = session.view()
     return {
+        "folder": session.backend.display,
+        "output": session.output_root,
         "segment": None if view is None else view.__dict__,
         "counts": session.counts(),
         "labels": session.label_choices(),
@@ -80,6 +95,11 @@ def _state_payload(session: ReviewSession) -> dict:
         "annotations": _annotation_payload(session),
         "review_log": {"path": session.log.path, "rows": session.log.rows},
     }
+
+
+def parse_local(session: ReviewSession) -> bool:
+    """Whether the open folder is on this machine, so the picker can start there."""
+    return isinstance(session.backend, LocalBackend)
 
 
 def _range_response(data: bytes, filename: str, request: Request) -> Response:
@@ -114,14 +134,30 @@ def _range_response(data: bytes, filename: str, request: Request) -> Response:
                     media_type=media_type, headers=headers)
 
 
-def create_app(session: ReviewSession, config: ReviewConfig,
+def _pattern_payload(pattern) -> dict | None:
+    if pattern is None:
+        return None
+    matched, total, example = pattern
+    return {"matched": matched, "total": total, "example": example}
+
+
+def create_app(workspace: Workspace, config: ReviewConfig,
                token: str | None = None) -> FastAPI:
-    """Build the app around an already-open review session."""
+    """Build the app around a workspace, with or without a folder open in it."""
     app = FastAPI(title="Segment Reviewer", version=__version__, docs_url=None,
                   redoc_url=None)
-    app.state.session = session
+    app.state.workspace = workspace
     app.state.config = config
     app.state.token = token
+    #: How the open folder's names were read — worked out once when it opened.
+    app.state.pattern = None
+
+    def current() -> ReviewSession:
+        """The open session; every clip-level call needs one."""
+        session = workspace.session
+        if session is None:
+            raise HTTPException(status_code=409, detail="no segments folder is open")
+        return session
 
     # ── access token ─────────────────────────────────────────────────────────
     def _authorized(request: Request) -> bool:
@@ -177,8 +213,6 @@ def create_app(session: ReviewSession, config: ReviewConfig,
     async def bootstrap():
         return {
             "version": __version__,
-            "folder": session.backend.display,
-            "remote": type(session.backend).__name__ == "SFTPBackend",
             "languages": i18n.language_names(),
             "lang": config.lang,
             "multi_label": config.multi_label,
@@ -189,7 +223,8 @@ def create_app(session: ReviewSession, config: ReviewConfig,
                 "fmax": config.freq_max_hz,
                 "db": config.db_min,
             },
-            "state": _state_payload(session),
+            "state": _state_payload(workspace),
+            "pattern": _pattern_payload(app.state.pattern),
         }
 
     @app.get("/api/i18n/{lang}")
@@ -199,38 +234,65 @@ def create_app(session: ReviewSession, config: ReviewConfig,
 
     @app.get("/api/state")
     async def state():
-        return _state_payload(session)
+        return _state_payload(workspace)
+
+    @app.post("/api/open")
+    async def open_folder(body: OpenBody):
+        """Open another segments folder, replacing the one under review."""
+        try:
+            opened = workspace.open(body.path)
+        except OpenError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except Exception as exc:  # noqa: BLE001 - shown to the reviewer verbatim
+            raise HTTPException(status_code=400, detail=f"could not open {body.path}: {exc}") from exc
+        app.state.pattern = opened.pattern
+        return {**_state_payload(workspace), "pattern": _pattern_payload(opened.pattern)}
+
+    @app.get("/api/browse")
+    async def browse_folders(path: str = ""):
+        """Folders on the machine the reviewer runs on, for the folder picker."""
+        session = workspace.session
+        start = None
+        if session is not None and parse_local(session):
+            start = session.backend.root
+        try:
+            return browse(path, start=start)
+        except OpenError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.post("/api/rescan")
     async def rescan():
-        session.rescan()
-        return _state_payload(session)
+        current().rescan()
+        return _state_payload(workspace)
 
     @app.post("/api/nav")
     async def nav(body: NavBody):
+        session = current()
         if body.index is not None:
             session.goto(body.index)
         else:
             session.navigate(body.delta)
-        return _state_payload(session)
+        return _state_payload(workspace)
 
     @app.get("/api/labels")
     async def labels():
-        return _labels_payload(session)
+        return _labels_payload(current())
 
     @app.post("/api/labels")
     async def edit_labels(body: LabelsBody):
         """Edit the label list from the GUI: replace it, or add/drop one label."""
+        session = current()
         if body.labels is not None:
             session.labels.replace(body.labels)
         if body.add:
             session.labels.add(body.add)
         if body.remove:
             session.labels.remove(body.remove)
-        return {**_labels_payload(session), "state": _state_payload(session)}
+        return {**_labels_payload(session), "state": _state_payload(workspace)}
 
     @app.post("/api/review")
     async def review(body: ReviewBody):
+        session = current()
         try:
             result = session.review(body.labels, unsure=body.unsure, relpath=body.relpath)
         except StaleSegment as exc:
@@ -239,7 +301,7 @@ def create_app(session: ReviewSession, config: ReviewConfig,
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except Exception as exc:  # noqa: BLE001 - shown to the reviewer verbatim
             raise HTTPException(status_code=500, detail=str(exc)) from exc
-        return {**_state_payload(session), **result}
+        return {**_state_payload(workspace), **result}
 
     @app.get("/api/spectrogram")
     async def spectrogram(
@@ -249,6 +311,7 @@ def create_app(session: ReviewSession, config: ReviewConfig,
         fmax: int = Query(0, ge=0, le=96000),
         db: int = Query(-80, ge=-120, le=-20),
     ):
+        session = current()
         try:
             png = session.spectrogram(index, spec_type=type, fmin=fmin, fmax=fmax,
                                       db_min=db)
@@ -261,6 +324,7 @@ def create_app(session: ReviewSession, config: ReviewConfig,
 
     @app.get("/api/audio")
     async def audio(request: Request, index: int = Query(0, ge=0)):
+        session = current()
         try:
             data, filename = session.audio_bytes(index)
         except IndexError as exc:

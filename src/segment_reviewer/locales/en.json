@@ -16,7 +16,8 @@
     "done": "✔  All segments have been reviewed.",
     "empty": "No segments waiting for review in this folder.",
     "counts": "{pending} pending · {correct} correct · {wrong} wrong · {unsure} unsure",
-    "labelled": " · {labelled} labelled"
+    "labelled": " · {labelled} labelled",
+    "no_folder": "Open a segments folder to start reviewing."
   },
   "meta_row": {
     "score": "score",
@@ -123,6 +124,21 @@
     "pattern_match": "Names read by it",
     "pattern_none": "The filename pattern read none of the {total} pending file names, so no site, time or score is shown. Check it against a real name:",
     "pattern_some": "The filename pattern read only {matched} of the {total} pending file names; the rest show no site, time or score. One it missed:",
-    "pattern_example": "{name}"
+    "pattern_example": "{name}",
+    "folder_none": "none yet — open one in the browser"
+  },
+  "folder": {
+    "placeholder": "Segments folder to review — /path/to/segments or ssh://host/path",
+    "hint": "Type a folder and press Enter, or pick one with Browse. Opening a folder writes nothing to it until the first segment is reviewed.",
+    "browse": "Browse…",
+    "open": "Open"
+  },
+  "browse": {
+    "title": "Choose a segments folder",
+    "up": "↑ Up",
+    "open_here": "Open this folder",
+    "cancel": "Cancel",
+    "empty": "No folders in here.",
+    "wavs_here": "{count} .wav file(s) directly in this folder"
   }
 }

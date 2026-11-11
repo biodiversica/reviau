@@ -53,15 +53,59 @@ body {
 .bar-left, .bar-right { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .logo { font-size: 18px; }
 .app-title { font-weight: 650; white-space: nowrap; }
-.folder {
-  color: var(--muted);
-  font-size: 12.5px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 46vw;
+/* ── the folder under review ─────────────────────────────────────────────── */
+.folder-bar {
+  display: flex;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
 }
+.folder-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 13px ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.folder-input:focus { outline: none; border-color: var(--accent); }
+.folder-bar.empty .folder-input { border-color: var(--accent); }
+.folder-bar.busy { opacity: .6; pointer-events: none; }
+.notice { color: var(--warn); font-size: 13px; text-align: center; }
+.notice:empty { display: none; }
+
+/* ── folder picker ───────────────────────────────────────────────────────── */
+dialog.browse { width: min(640px, calc(100vw - 32px)); }
+.browse-path { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.browse-path code { font-size: 12.5px; word-break: break-all; color: var(--muted); }
+.browse-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 50vh;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.browse-list li + li { border-top: 1px solid var(--line); }
+.browse-list button {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 7px 10px;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.browse-list button:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.browse-list .has-wavs::after { content: "  ♪"; color: var(--accent); }
+.browse-list .empty { padding: 10px; color: var(--muted); }
+.browse-actions { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.browse-actions .hint { flex: 1; }
 .counts { color: var(--muted); font-size: 12.5px; white-space: nowrap; }
 
 .icon-btn, .lang {

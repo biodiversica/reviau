@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from segment_reviewer.config import ReviewConfig  # noqa: E402
 from segment_reviewer.review import ReviewSession  # noqa: E402
 from segment_reviewer.storage import LocalBackend  # noqa: E402
+from segment_reviewer.workspace import Workspace  # noqa: E402
 
 
 def write_wav(path: Path, seconds: float = 0.5, sr: int = 22050) -> None:
@@ -95,6 +96,14 @@ def vector_search_dir(tmp_path):
 def make_session(root, **kwargs) -> ReviewSession:
     config = ReviewConfig(segments=str(root), **kwargs)
     return ReviewSession(LocalBackend(str(root)), config)
+
+
+def make_workspace(root=None, **kwargs) -> Workspace:
+    """A workspace opening local folders, with *root* open in it when given."""
+    workspace = Workspace(ReviewConfig(**kwargs), LocalBackend)
+    if root is not None:
+        workspace.open(str(root))
+    return workspace
 
 
 def goto_name(session: ReviewSession, needle: str) -> None:

@@ -10,6 +10,11 @@ the GUI, and nothing is added back behind their back.
 choice of what to offer, so those are the whole list the session starts with,
 replacing anything stored, and are written out in turn.
 
+Opening a folder writes nothing: a seeded or overriding list is held in memory
+and written out with the first segment reviewed (:meth:`LabelStore.flush`), so
+a folder opened by mistake is left exactly as it was. An edit made in the GUI is
+a deliberate change and is written at once.
+
 A clip's own label and anything typed into the box are always available whether
 or not they are on the list, so a trimmed list never blocks a verdict.
 """
@@ -46,18 +51,19 @@ class LabelStore:
         self.backend = backend
         self.path = path if persist else ""
         self.error = ""
+        #: A list worked out on opening that the file does not hold yet.
+        self._unsaved = False
         stored = self._read()
         asked_for = merge(configured)
         if asked_for:
             # Labels named on the command line are the list for this run: only
             # those are offered, whatever the collection uses or the file holds.
             self._labels = asked_for
-            if self._labels != stored:
-                self._save()
+            self._unsaved = self._labels != stored
         elif stored is None:
             # First run: the labels the collection already uses.
             self._labels = merge(discovered)
-            self._save()
+            self._unsaved = True
         else:
             # From then on the file is the list.
             self._labels = stored
@@ -90,6 +96,7 @@ class LabelStore:
     # ── writing ──────────────────────────────────────────────────────────────
     def _save(self) -> None:
         """Write the list out. A folder that cannot be written to is not fatal."""
+        self._unsaved = False
         if not self.path:
             return
         body = "".join(f"{label}\n" for label in self._labels)
@@ -98,6 +105,11 @@ class LabelStore:
             self.error = ""
         except Exception as exc:  # noqa: BLE001 - the session carries on in memory
             self.error = str(exc)
+
+    def flush(self) -> None:
+        """Write out a list worked out on opening, once the folder is in use."""
+        if self._unsaved:
+            self._save()
 
     def replace(self, labels) -> list[str]:
         """Set the whole list, as the GUI's label editor does."""

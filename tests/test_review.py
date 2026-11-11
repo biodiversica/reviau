@@ -497,9 +497,11 @@ def test_a_blank_annotations_path_falls_back_inside_the_segments_folder(segments
 
 
 # ── the editable label list ──────────────────────────────────────────────────
-def test_the_list_is_seeded_from_the_collection_and_written(segments_dir):
+def test_the_list_is_seeded_from_the_collection_and_written_once_in_use(segments_dir):
     session = make_session(segments_dir)
     assert session.label_choices() == ["BOAALB", "PHYLUT"]
+    assert not (segments_dir / "labels.txt").exists()      # opening writes nothing
+    accept(session)
     assert (segments_dir / "labels.txt").read_text().split() == ["BOAALB", "PHYLUT"]
 
 
@@ -513,6 +515,8 @@ def test_labels_named_on_the_command_line_replace_a_stored_list(segments_dir):
     (segments_dir / "labels.txt").write_text("rain\n", encoding="utf-8")
     session = make_session(segments_dir, labels=["chuva"])
     assert session.label_choices() == ["chuva"]
+    assert (segments_dir / "labels.txt").read_text().split() == ["rain"]
+    accept(session)
     assert (segments_dir / "labels.txt").read_text().split() == ["chuva"]
 
 
@@ -566,9 +570,17 @@ def test_multi_label_is_on_by_default(segments_dir):
     assert session.config.multi_label is True
 
 
-def test_only_the_three_verdict_folders_are_made_up_front(segments_dir):
-    make_session(segments_dir)
-    for name in ("correct", "wrong", "unsure"):
-        assert (segments_dir / name).is_dir()
-    assert not (segments_dir / "labelled").exists()
-    assert not (segments_dir / "multi").exists()
+def test_opening_a_folder_writes_nothing_to_it(segments_dir):
+    """A folder opened by mistake from the GUI must be left as it was found."""
+    before = sorted(p.relative_to(segments_dir) for p in segments_dir.rglob("*"))
+    make_session(segments_dir, save_annotations=True)
+    assert sorted(p.relative_to(segments_dir) for p in segments_dir.rglob("*")) == before
+
+
+def test_the_first_review_makes_only_the_folder_it_needs(segments_dir):
+    session = make_session(segments_dir)
+    goto_name(session, FIRST)
+    accept(session)
+    assert (segments_dir / "correct").is_dir()
+    for name in ("wrong", "unsure", "labelled", "multi"):
+        assert not (segments_dir / name).exists()

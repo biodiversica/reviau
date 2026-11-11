@@ -16,7 +16,8 @@
     "done": "✔  Todos os segmentos foram revisados.",
     "empty": "Nenhum segmento aguardando revisão nesta pasta.",
     "counts": "{pending} pendente(s) · {correct} correto(s) · {wrong} errado(s) · {unsure} incerto(s)",
-    "labelled": " · {labelled} rotulado(s)"
+    "labelled": " · {labelled} rotulado(s)",
+    "no_folder": "Abra uma pasta de segmentos para começar a revisão."
   },
   "meta_row": {
     "score": "escore",
@@ -123,6 +124,21 @@
     "pattern_match": "Nomes lidos por ele",
     "pattern_none": "O padrão do nome não leu nenhum dos {total} arquivos pendentes, por isso não aparecem sítio, data nem score. Confira o padrão com um nome real:",
     "pattern_some": "O padrão do nome leu apenas {matched} dos {total} arquivos pendentes; nos demais não aparecem sítio, data nem score. Um dos que ficaram de fora:",
-    "pattern_example": "{name}"
+    "pattern_example": "{name}",
+    "folder_none": "nenhuma ainda — abra uma no navegador"
+  },
+  "folder": {
+    "placeholder": "Pasta de segmentos a revisar — /caminho/dos/segmentos ou ssh://host/caminho",
+    "hint": "Digite uma pasta e aperte Enter, ou escolha uma em Procurar. Abrir uma pasta não grava nada nela até o primeiro segmento ser revisado.",
+    "browse": "Procurar…",
+    "open": "Abrir"
+  },
+  "browse": {
+    "title": "Escolha uma pasta de segmentos",
+    "up": "↑ Acima",
+    "open_here": "Abrir esta pasta",
+    "cancel": "Cancelar",
+    "empty": "Nenhuma pasta aqui.",
+    "wavs_here": "{count} arquivo(s) .wav diretamente nesta pasta"
   }
 }

@@ -12,7 +12,6 @@
     <div class="bar-left">
       <span class="logo">🎧</span>
       <span class="app-title" data-i18n="app.title">Segment Reviewer</span>
-      <span class="folder" id="folder" title=""></span>
     </div>
     <div class="bar-right">
       <span class="counts" id="counts"></span>
@@ -22,7 +21,16 @@
     </div>
   </header>
 
+  <form id="folder-form" class="folder-bar" autocomplete="off">
+    <input id="folder-input" class="folder-input" type="text" list="recent-folders"
+           spellcheck="false" data-i18n-ph="folder.placeholder" data-i18n-title="folder.hint">
+    <datalist id="recent-folders"></datalist>
+    <button type="button" id="btn-browse" class="btn small" data-i18n="folder.browse">Browse…</button>
+    <button type="submit" id="btn-open" class="btn small ok" data-i18n="folder.open">Open</button>
+  </form>
+
   <main>
+    <div id="notice" class="notice"></div>
     <div id="progress" class="progress"></div>
     <div id="meta" class="meta"></div>
 
@@ -77,6 +85,21 @@
 
     <div id="ann" class="ann"></div>
   </main>
+
+  <dialog id="browse-dialog" class="browse">
+    <h2 data-i18n="browse.title">Choose a segments folder</h2>
+    <div class="browse-path">
+      <button type="button" id="browse-up" class="btn small" data-i18n="browse.up">↑ Up</button>
+      <code id="browse-here"></code>
+    </div>
+    <ul id="browse-list" class="browse-list"></ul>
+    <div id="browse-error" class="error"></div>
+    <div class="browse-actions">
+      <span id="browse-wavs" class="hint"></span>
+      <button type="button" id="browse-cancel" class="btn small" data-i18n="browse.cancel">Cancel</button>
+      <button type="button" id="browse-open" class="btn small ok" data-i18n="browse.open_here">Open this folder</button>
+    </div>
+  </dialog>
 
   <dialog id="help-dialog">
     <h2 data-i18n="shortcuts.title">Keyboard shortcuts</h2>

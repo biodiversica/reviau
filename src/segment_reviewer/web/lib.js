@@ -95,9 +95,16 @@
     return others;
   }
 
+  /** The recently opened folders, *path* first, without repeats, at most *max*. */
+  function rememberFolder(recent, path, max) {
+    const clean = String(path === undefined || path === null ? '' : path).trim();
+    const rest = (recent || []).filter((x) => typeof x === 'string' && x && x !== clean);
+    return (clean ? [clean] : []).concat(rest).slice(0, max || 8);
+  }
+
   const lib = {
     SPEC_TYPES, splitLabels, clampInt, mediaKey,
-    spectrogramUrl, audioUrl, toggleLabel, buttonLabels, reviewLabels,
+    spectrogramUrl, audioUrl, toggleLabel, buttonLabels, reviewLabels, rememberFolder,
   };
   if (typeof module === 'object' && module.exports) module.exports = lib;
   else root.SegRev = lib;
