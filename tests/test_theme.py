@@ -43,3 +43,18 @@ def test_a_pinned_theme_is_applied_before_the_first_paint():
     assert "localStorage.getItem('segrev.theme')" in head
     assert "dataset.theme" in head
     assert "const THEME_KEY = 'segrev.theme';" in APP
+
+
+def test_the_footer_links_home_in_a_new_tab():
+    foot = re.search(r'<footer class="foot">(.*?)</footer>', HTML, re.S).group(1)
+    assert 'href="https://biodiversica.xyz/"' in foot
+    assert 'target="_blank"' in foot and 'rel="noopener noreferrer"' in foot
+    assert ">~/biodiversica</a>" in foot
+    assert "data-i18n" not in foot             # a name: never translated
+
+
+def test_the_footer_is_fixed_and_the_page_leaves_room_for_it():
+    foot = re.search(r"^\.foot \{(.*?)^\}", CSS, re.S | re.M).group(1)
+    assert "position: fixed;" in foot and "bottom: 0;" in foot
+    main = re.search(r"^main \{(.*?)^\}", CSS, re.S | re.M).group(1)
+    assert "var(--foot-height)" in main
