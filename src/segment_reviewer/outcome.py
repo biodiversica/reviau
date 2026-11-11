@@ -5,16 +5,16 @@ labels. Whether the prediction was right follows from that set and the label the
 clip arrived with, so it is derived here rather than asked for separately: two
 inputs for one fact can contradict each other, one cannot.
 
-========================  =============  ======================================
-reviewer's labels         outcome        meaning
-========================  =============  ======================================
-``{P}``                   ``correct``    true positive
-``{P, X, …}``             ``correct``    true positive, more species present
-``{X, …}`` without P      ``wrong``      false positive, with what it really is
-``{}``                    ``wrong``      false positive, nothing on the list
-any, marked unsure        ``unsure``     no decision; kept out of the counts
-any, clip has no P        ``labelled``   nothing was predicted to be right about
-========================  =============  ======================================
+========================  ===============  ======================================
+reviewer's labels         outcome          meaning
+========================  ===============  ======================================
+``{P}``                   ``correct``      true positive
+``{P, X, …}``             ``correct``      true positive, more species present
+``{X, …}`` without P      ``incorrect``    false positive, with what it really is
+``{}``                    ``incorrect``    false positive, nothing on the list
+any, marked uncertain     ``uncertain``    no decision; kept out of the counts
+any, clip has no P        ``labelled``     nothing was predicted to be right about
+========================  ===============  ======================================
 """
 
 from __future__ import annotations
@@ -24,14 +24,14 @@ from dataclasses import dataclass
 from .naming import nfc, slug
 
 CORRECT = "correct"
-WRONG = "wrong"
-UNSURE = "unsure"
+INCORRECT = "incorrect"
+UNCERTAIN = "uncertain"
 LABELLED = "labelled"
 
 #: Every outcome, in the order they are reported. Each is also the name of the
 #: folder its clips are filed under — fixed, whatever the interface language,
 #: so the data a review writes never depends on who reviewed it.
-OUTCOMES: tuple[str, ...] = (CORRECT, WRONG, UNSURE, LABELLED)
+OUTCOMES: tuple[str, ...] = (CORRECT, INCORRECT, UNCERTAIN, LABELLED)
 
 
 def clean_labels(labels) -> tuple[str, ...]:
@@ -62,10 +62,10 @@ class Outcome:
     @property
     def is_annotation(self) -> bool:
         """Whether the labels are a confident statement of what the clip holds."""
-        return self.kind != UNSURE
+        return self.kind != UNCERTAIN
 
 
-def decide(predicted: str | None, labels, *, unsure: bool = False) -> Outcome:
+def decide(predicted: str | None, labels, *, uncertain: bool = False) -> Outcome:
     """The outcome of reviewing a clip predicted *predicted* as holding *labels*."""
     p = nfc(predicted or "").strip()
     # A label read off a folder has its underscores shown as spaces, so the
@@ -75,18 +75,18 @@ def decide(predicted: str | None, labels, *, unsure: bool = False) -> Outcome:
     given = clean_labels(
         p if p and slug(nfc(x)) == slug(p) else x for x in (labels or ())
     )
-    if unsure:
-        kind = UNSURE
+    if uncertain:
+        kind = UNCERTAIN
     elif not p:
         kind = LABELLED
     elif p in given:
         kind = CORRECT
     else:
-        kind = WRONG
+        kind = INCORRECT
     return Outcome(kind=kind, predicted=p, labels=given)
 
 
 __all__ = [
-    "CORRECT", "WRONG", "UNSURE", "LABELLED", "OUTCOMES",
+    "CORRECT", "INCORRECT", "UNCERTAIN", "LABELLED", "OUTCOMES",
     "Outcome", "clean_labels", "decide",
 ]

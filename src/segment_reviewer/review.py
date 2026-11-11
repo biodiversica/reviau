@@ -154,9 +154,9 @@ class ReviewSession:
     def path_at(self, index: int) -> str:
         with self._lock:
             if not self.segments:
-                raise IndexError("no segments pending review")
+                raise IndexError("No segments are pending review.")
             if not 0 <= index < len(self.segments):
-                raise IndexError(f"segment {index} is out of range")
+                raise IndexError(f"Segment {index} is out of range.")
             return self.segments[index]
 
     def view(self) -> SegmentView | None:
@@ -243,19 +243,19 @@ class ReviewSession:
         """Where a reviewed segment goes: its outcome, then what was predicted.
 
         Filing by the *prediction* keeps each folder answering one question —
-        ``wrong/PONTO_A/BOAALB/`` holds exactly the clips the model called
+        ``incorrect/PONTO_A/BOAALB/`` holds exactly the clips the model called
         BOAALB and got wrong, so counting a folder is that class's precision.
         The labels the reviewer added beyond the prediction are appended to
         the file name, and every clip's labels are in the review log.
 
         * **Label in a folder** (the default) — the folders that stood *above*
           the label are kept: ``PONTO_A/BOAALB/x.wav`` becomes
-          ``correct/PONTO_A/BOAALB/x.wav`` or ``wrong/PONTO_A/BOAALB/x.wav``.
+          ``correct/PONTO_A/BOAALB/x.wav`` or ``incorrect/PONTO_A/BOAALB/x.wav``.
           Whatever sat *below* the label is not rebuilt: under
           ``--label-depth``, ``BOAALB/PONTO_A/20240115/x.wav`` becomes
-          ``wrong/BOAALB/x.wav`` — the site and day are in the file name.
+          ``incorrect/BOAALB/x.wav`` — the site and day are in the file name.
         * **Label in the file name** — filed flat under the prediction:
-          ``wrong/BOAALB/x.wav``.
+          ``incorrect/BOAALB/x.wav``.
         * **No prediction** — the folders it sat in, under ``labelled/``.
         """
         parts = [] if info.label_in_filename else list(info.prefix)
@@ -264,11 +264,11 @@ class ReviewSession:
         root = self.verdict_root(outcome.kind)
         return self.backend.join(root, *parts) if parts else root
 
-    def review(self, labels: list[str] | None = None, *, unsure: bool = False,
+    def review(self, labels: list[str] | None = None, *, uncertain: bool = False,
                relpath: str | None = None) -> dict:
         """File the current segment as holding *labels*, and drop it from the list.
 
-        The outcome — correct, wrong, unsure, or labelled when nothing was
+        The outcome — correct, incorrect, uncertain, or labelled when nothing was
         predicted — follows from *labels* and the clip's own label; see
         :func:`segment_reviewer.outcome.decide`. *relpath*, when given, must be
         the clip on screen: a second tab, or a click racing a rescan, must not
@@ -281,12 +281,12 @@ class ReviewSession:
             rel_src = self.backend.relpath(src, self.backend.root).replace(self.backend.sep, "/")
             if relpath is not None and relpath != rel_src:
                 raise StaleSegment(
-                    f"{relpath} is no longer the segment on screen ({rel_src} is)"
+                    f"The segment {relpath} is no longer the one on screen; the current segment is {rel_src}."
                 )
             info = self._parse(src)
-            outcome = decide(info.label, labels, unsure=unsure)
+            outcome = decide(info.label, labels, uncertain=uncertain)
             if len(outcome.labels) > 1 and not self.config.multi_label:
-                raise ValueError("this review allows one label per segment")
+                raise ValueError("Only one label per segment is allowed in this review.")
 
             # Read the clip before moving it: it has to be on disk to be measured.
             try:
@@ -299,10 +299,10 @@ class ReviewSession:
             self.backend.makedirs(folder)
             # The folder names the prediction; the file name gains every label
             # the reviewer added beyond it, so the tree reads without the log:
-            #   wrong/PONTO_A/BOAALB/x_TURDRU.wav    called BOAALB, really TURDRU
-            #   correct/PONTO_A/BOAALB/x_PHYLUT.wav  BOAALB, and PHYLUT as well
-            # Nothing added — a plain correct, a wrong holding nothing on the
-            # list — and anything marked unsure keep the name as it was found.
+            #   incorrect/PONTO_A/BOAALB/x_TURDRU.wav  called BOAALB, really TURDRU
+            #   correct/PONTO_A/BOAALB/x_PHYLUT.wav    BOAALB, and PHYLUT as well
+            # Nothing added — a plain correct, an incorrect holding nothing on the
+            # list — and anything marked uncertain keep the name as it was found.
             name = self.backend.basename(src)
             if outcome.is_annotation:
                 name = with_labels(name, outcome.added)

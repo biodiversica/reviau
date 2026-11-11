@@ -8,11 +8,11 @@
   },
   "toolbar": {
     "language": "Idioma",
-    "rescan_hint": "Relê a pasta e refaz a lista de pendentes",
+    "rescan_hint": "Reexaminar a pasta e reconstruir a lista de segmentos pendentes",
     "help": "Atalhos de teclado"
   },
   "theme": {
-    "system": "Tema: segue o sistema",
+    "system": "Tema: padrão do sistema",
     "light": "Tema: claro",
     "dark": "Tema: escuro",
     "change": "{title}. Clique para alterar."
@@ -20,94 +20,94 @@
   "progress": {
     "segment": "Segmento <b>{index}</b> de <b>{total}</b>",
     "done": "✔  Todos os segmentos foram revisados.",
-    "empty": "Nenhum segmento aguardando revisão nesta pasta.",
-    "counts": "{pending} pendente(s) · {correct} correto(s) · {wrong} errado(s) · {unsure} incerto(s)",
-    "labelled": " · {labelled} rotulado(s)",
-    "no_folder": "Abra uma pasta de segmentos para começar a revisão."
+    "empty": "Esta pasta não contém segmentos pendentes de revisão.",
+    "counts": "Pendentes: {pending} · Corretos: {correct} · Incorretos: {incorrect} · Incertos: {uncertain}",
+    "labelled": " · Rotulados: {labelled}",
+    "no_folder": "Abra uma pasta de segmentos para iniciar a revisão."
   },
   "meta_row": {
-    "score": "escore",
-    "site": "ponto",
-    "date": "data",
-    "folder": "pasta",
-    "extra": "extra",
-    "no_label": "sem rótulo",
-    "predicted": "previsto"
+    "score": "Escore",
+    "site": "Ponto",
+    "date": "Data",
+    "folder": "Pasta",
+    "extra": "Outros",
+    "no_label": "Sem rótulo",
+    "predicted": "Previsto"
   },
   "spec": {
     "type": "Tipo:",
     "mel": "Mel",
     "fft": "FFT (linear)",
     "log": "FFT (log)",
-    "fmin": "Hz mín:",
-    "fmax": "Hz máx:",
-    "db": "Valor mínimo dB:",
-    "nyquist": "(Hz máx = 0 → Nyquist)",
-    "error": "Erro no espectrograma: {error}",
+    "fmin": "Mínimo (Hz):",
+    "fmax": "Máximo (Hz):",
+    "db": "Limite inferior (dB):",
+    "nyquist": "(máximo 0 corresponde à frequência de Nyquist)",
+    "error": "Não foi possível gerar o espectrograma: {error}",
     "loading": "Gerando espectrograma…"
   },
   "nav": {
     "prev": "← Anterior",
     "true": "✔  Correto",
-    "false": "✘  Errado",
+    "false": "✘  Incorreto",
     "unsure": "?  Incerto",
     "next": "Próximo →",
-    "true_hint": "A previsão está no clipe — salvo junto com qualquer outro rótulo marcado (T)",
-    "false_hint": "A previsão não está no clipe — salvo com os rótulos marcados, ou como nada da lista (F)",
-    "unsure_hint": "Não dá para dizer — guardado à parte e fora das contagens (U)",
+    "true_hint": "O rótulo previsto está presente no clipe. Os demais rótulos selecionados são salvos com ele (T).",
+    "false_hint": "O rótulo previsto não está presente no clipe. Os rótulos selecionados, se houver, são salvos em seu lugar (F).",
+    "unsure_hint": "Não é possível avaliar o clipe. Ele é arquivado separadamente e excluído das contagens de corretos e incorretos (U).",
     "true_plus": "✔  Correto + {labels}",
-    "false_to": "✘  Errado → {labels}",
-    "false_none": "✘  Errado · nada da lista",
+    "false_to": "✘  Incorreto → {labels}",
+    "false_none": "✘  Incorreto · nenhum rótulo da lista",
     "save_labels": "✔  Salvar: {labels}",
-    "save_none": "✔  Salvar · nada da lista"
+    "save_none": "✔  Salvar · nenhum rótulo da lista"
   },
   "labels": {
     "row": "Rótulos:",
-    "selected": "Rótulos deste segmento — clique para marcar:",
-    "manage": "Adicionar ou remover rótulos da lista",
-    "manage_on": "Concluir a edição da lista",
+    "selected": "Rótulos deste segmento (clique para marcar ou desmarcar):",
+    "manage": "Editar a lista de rótulos",
+    "manage_on": "Concluir a edição da lista de rótulos",
     "add": "Adicionar",
     "add_placeholder": "Novo rótulo",
     "remove": "Remover “{label}” da lista",
-    "empty": "Nenhum rótulo na lista ainda — adicione um abaixo.",
-    "saved_to": "Lista salva em {path}",
-    "not_saved": "Lista não salva: {error}",
-    "session_only": "Lista mantida só nesta sessão.",
-    "others": "Há mais alguma coisa neste clipe — ou o que ele realmente é? Clique para marcar:",
+    "empty": "A lista de rótulos está vazia. Adicione um rótulo abaixo.",
+    "saved_to": "A lista é salva em {path}",
+    "not_saved": "Não foi possível salvar a lista: {error}",
+    "session_only": "A lista é mantida apenas nesta sessão.",
+    "others": "Rótulos adicionais ou corrigidos (clique para marcar ou desmarcar):",
     "predicted_tag": "◆ previsto",
-    "predicted_hint": "A previsão do modelo — responda com Correto ou Errado"
+    "predicted_hint": "A previsão do modelo. Avalie-a com Correto ou Incorreto."
   },
   "annotations": {
     "label": "Tabela de anotações",
-    "rows": "{count} linha(s) adicionada(s) → {path}",
-    "no_path": "nenhum caminho definido — nada será salvo",
-    "read_error": "não foi possível ler segment_sources.csv: {error}",
-    "norec": "{count} linha(s) sem gravação de origem: {why}",
-    "why_missing": "não há segment_sources.csv na pasta de segmentos",
-    "why_unlisted": "esses clipes não estão listados no segment_sources.csv"
+    "rows": "Linhas gravadas: {count} — {path}",
+    "no_path": "Nenhum caminho de arquivo foi definido; nada será gravado.",
+    "read_error": "Não foi possível ler segment_sources.csv: {error}",
+    "norec": "Linhas sem gravação de origem: {count} ({why})",
+    "why_missing": "segment_sources.csv não foi encontrado na pasta de segmentos",
+    "why_unlisted": "estes clipes não constam em segment_sources.csv"
   },
   "shortcuts": {
     "title": "Atalhos de teclado",
     "prev": "Segmento anterior",
     "next": "Próximo segmento",
-    "true": "Rótulo previsto está correto",
-    "false": "Rótulo previsto está errado",
-    "play": "Tocar / pausar o áudio",
+    "true": "Marcar o rótulo previsto como correto",
+    "false": "Marcar o rótulo previsto como incorreto",
+    "play": "Reproduzir ou pausar o áudio",
     "close": "Fechar",
-    "labels": "Marcar o 1º…9º rótulo",
-    "unsure": "Incerto"
+    "labels": "Marcar ou desmarcar os rótulos 1 a 9",
+    "unsure": "Marcar o segmento como incerto"
   },
   "errors": {
-    "network": "Não foi possível falar com o servidor do revisor.",
-    "unauthorized": "Token de acesso ausente ou incorreto."
+    "network": "Não foi possível conectar ao servidor do revisor.",
+    "unauthorized": "O token de acesso está ausente ou é inválido."
   },
   "cli": {
     "folder": "Pasta de segmentos",
     "output": "Revisados vão para",
     "pending": "Pendentes de revisão",
     "already_correct": "Já corretos",
-    "already_wrong": "Já errados",
-    "already_unsure": "Já incertos",
+    "already_incorrect": "Já incorretos",
+    "already_uncertain": "Já incertos",
     "already_labelled": "Já rotulados",
     "review_log": "Registro da revisão",
     "labels": "Lista de rótulos",
@@ -128,23 +128,23 @@
     "pattern": "Padrão do nome",
     "labels_file": "Arquivo da lista",
     "pattern_match": "Nomes lidos por ele",
-    "pattern_none": "O padrão do nome não leu nenhum dos {total} arquivos pendentes, por isso não aparecem sítio, data nem score. Confira o padrão com um nome real:",
-    "pattern_some": "O padrão do nome leu apenas {matched} dos {total} arquivos pendentes; nos demais não aparecem sítio, data nem score. Um dos que ficaram de fora:",
+    "pattern_none": "O padrão de nome não reconheceu nenhum dos {total} nomes de arquivo pendentes; por isso, ponto, horário e escore não são exibidos. Exemplo de nome não reconhecido:",
+    "pattern_some": "O padrão de nome reconheceu {matched} dos {total} nomes de arquivo pendentes; nos demais, ponto, horário e escore não são exibidos. Exemplo de nome não reconhecido:",
     "pattern_example": "{name}",
     "folder_none": "nenhuma ainda — abra uma no navegador"
   },
   "folder": {
-    "placeholder": "Pasta de segmentos a revisar — /caminho/dos/segmentos ou ssh://host/caminho",
-    "hint": "Digite uma pasta e aperte Enter, ou escolha uma em Procurar. Abrir uma pasta não grava nada nela até o primeiro segmento ser revisado.",
+    "placeholder": "Caminho da pasta de segmentos (caminho local ou ssh://host/caminho)",
+    "hint": "Informe o caminho de uma pasta e pressione Enter, ou selecione uma em Procurar. Nada é gravado na pasta até que o primeiro segmento seja revisado.",
     "browse": "Procurar…",
     "open": "Abrir"
   },
   "browse": {
-    "title": "Escolha uma pasta de segmentos",
-    "up": "↑ Acima",
+    "title": "Selecione uma pasta de segmentos",
+    "up": "↑ Pasta superior",
     "open_here": "Abrir esta pasta",
     "cancel": "Cancelar",
-    "empty": "Nenhuma pasta aqui.",
-    "wavs_here": "{count} arquivo(s) .wav diretamente nesta pasta"
+    "empty": "Esta pasta não contém subpastas.",
+    "wavs_here": "Arquivos WAV nesta pasta: {count}"
   }
 }

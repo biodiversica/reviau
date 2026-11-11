@@ -2,16 +2,16 @@
 
 import pytest
 
-from segment_reviewer.outcome import CORRECT, LABELLED, UNSURE, WRONG, decide
+from segment_reviewer.outcome import CORRECT, LABELLED, UNCERTAIN, INCORRECT, decide
 
 
 @pytest.mark.parametrize("labels, kind, added", [
     (["BOAALB"], CORRECT, ()),
     (["BOAALB", "PHYLUT"], CORRECT, ("PHYLUT",)),
     (["PHYLUT", "BOAALB"], CORRECT, ("PHYLUT",)),
-    (["TURDRU"], WRONG, ("TURDRU",)),
-    (["TURDRU", "PHYLUT"], WRONG, ("TURDRU", "PHYLUT")),
-    ([], WRONG, ()),
+    (["TURDRU"], INCORRECT, ("TURDRU",)),
+    (["TURDRU", "PHYLUT"], INCORRECT, ("TURDRU", "PHYLUT")),
+    ([], INCORRECT, ()),
 ])
 def test_the_outcome_follows_from_the_labels(labels, kind, added):
     outcome = decide("BOAALB", labels)
@@ -21,8 +21,8 @@ def test_the_outcome_follows_from_the_labels(labels, kind, added):
 
 
 def test_unsure_wins_and_keeps_the_guess():
-    outcome = decide("BOAALB", ["TURDRU"], unsure=True)
-    assert outcome.kind == UNSURE
+    outcome = decide("BOAALB", ["TURDRU"], uncertain=True)
+    assert outcome.kind == UNCERTAIN
     assert outcome.labels == ("TURDRU",)
     assert not outcome.is_annotation
 
@@ -40,7 +40,7 @@ def test_labels_are_cleaned_and_deduplicated():
 
 def test_an_underscore_spelling_is_the_same_class():
     """A folder chuva_forte/ is shown as "chuva forte"; typing it with the
-    underscore must not turn a correct clip into a wrong one."""
+    underscore must not turn a correct clip into a incorrect one."""
     outcome = decide("chuva forte", ["chuva_forte"])
     assert outcome.kind == CORRECT
     assert outcome.labels == ("chuva forte",)

@@ -36,7 +36,7 @@ cli = typer.Typer(
     help=(
         "Review a folder of audio segments in the browser: listen to each clip, "
         "look at its spectrogram, and say what is in it. Whether its label was "
-        "correct or wrong follows from that, and every review is logged to "
+        "correct or incorrect follows from that, and every review is logged to "
         "reviews.csv.\n\n"
         "By default a segment's label is the folder it sits in, and its file name "
         "is read as [site]_[YYYYMMDD]_[HHMMSS]_[start]_[end]_* — both are "
@@ -122,8 +122,8 @@ def _summary(session: ReviewSession | None, config: ReviewConfig, t) -> str:
             (t("cli.output"), session.output_root),
             (t("cli.pending"), str(counts["pending"])),
             (t("cli.already_correct"), str(counts["correct"])),
-            (t("cli.already_wrong"), str(counts["wrong"])),
-            (t("cli.already_unsure"), str(counts["unsure"])),
+            (t("cli.already_wrong"), str(counts["incorrect"])),
+            (t("cli.already_unsure"), str(counts["uncertain"])),
             *([(t("cli.already_labelled"), str(counts["labelled"]))]
               if counts["labelled"] else []),
             (t("cli.review_log"), session.log.path),
@@ -215,7 +215,7 @@ def review(
     annotations: bool = typer.Option(
         False, "--annotations/--no-annotations",
         help="Also write a CSV with one row per label a segment is confirmed to "
-             "hold; rejected predictions and unsure segments add no row.",
+             "hold; rejected predictions and uncertain segments add no row.",
     ),
     annotations_path: str = typer.Option(
         "", "--annotations-path",
@@ -233,7 +233,7 @@ def review(
     output: str = typer.Option(
         "", "--output", "-o",
         help="Where the reviewed segments are written: the folder holding "
-             "correct/, wrong/, unsure/ and reviews.csv. Relative paths are inside "
+             "correct/, incorrect/, uncertain/ and reviews.csv. Relative paths are inside "
              "the segments folder.  [default: the segments folder itself]",
     ),
     host: str = typer.Option(

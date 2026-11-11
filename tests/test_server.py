@@ -64,18 +64,18 @@ def test_a_review_moves_the_file_and_reports_the_outcome(client, segments_dir):
 
 def test_the_outcome_is_worked_out_on_the_server(client):
     """No verdict is sent: leaving the prediction out of the labels is what
-    makes the clip wrong."""
+    makes the clip incorrect."""
     api, _ = client
     data = api.post("/api/review", json={"relpath": ON_SCREEN, "labels": ["TURDRU"]}).json()
-    assert data["outcome"] == "wrong"
-    assert data["moved"].startswith("wrong/POCA/BOAALB/")
+    assert data["outcome"] == "incorrect"
+    assert data["moved"].startswith("incorrect/POCA/BOAALB/")
 
 
 def test_unsure_over_http(client):
     api, _ = client
-    data = api.post("/api/review", json={"relpath": ON_SCREEN, "unsure": True}).json()
-    assert data["outcome"] == "unsure"
-    assert data["counts"]["unsure"] == 1
+    data = api.post("/api/review", json={"relpath": ON_SCREEN, "uncertain": True}).json()
+    assert data["outcome"] == "uncertain"
+    assert data["counts"]["uncertain"] == 1
 
 
 def test_a_review_of_a_clip_no_longer_on_screen_is_a_conflict(client, segments_dir):

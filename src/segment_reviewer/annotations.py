@@ -8,7 +8,7 @@
 * The **annotation table** (``annotations.csv``, opt-in) is derived data: one row
   per label a clip is confirmed to hold — ``site, file, label, start_time,
   end_time``. A rejected prediction never appears in it, and neither does a clip
-  the reviewer was unsure of.
+  the reviewer was uncertain of.
 
 Both are appended as they happen, so a lost session keeps what was reviewed.
 """
@@ -149,7 +149,7 @@ class AnnotationTable:
     def append(self, review: Review) -> None:
         """Write a row for every label the clip is confirmed to hold.
 
-        A clip marked unsure says nothing confident, and a clip that holds
+        A clip marked uncertain says nothing confident, and a clip that holds
         nothing on the list has no label to write — neither adds a row.
         """
         if not self.enabled or not review.outcome.is_annotation:

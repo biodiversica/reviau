@@ -8,11 +8,11 @@
   },
   "toolbar": {
     "language": "Language",
-    "rescan_hint": "Re-read the folder and rebuild the pending list",
+    "rescan_hint": "Rescan the folder and rebuild the list of pending segments",
     "help": "Keyboard shortcuts"
   },
   "theme": {
-    "system": "Theme: follows your system",
+    "system": "Theme: system default",
     "light": "Theme: light",
     "dark": "Theme: dark",
     "change": "{title}. Click to change."
@@ -20,94 +20,94 @@
   "progress": {
     "segment": "Segment <b>{index}</b> of <b>{total}</b>",
     "done": "✔  All segments have been reviewed.",
-    "empty": "No segments waiting for review in this folder.",
-    "counts": "{pending} pending · {correct} correct · {wrong} wrong · {unsure} unsure",
-    "labelled": " · {labelled} labelled",
-    "no_folder": "Open a segments folder to start reviewing."
+    "empty": "This folder contains no segments pending review.",
+    "counts": "Pending: {pending} · Correct: {correct} · Incorrect: {incorrect} · Uncertain: {uncertain}",
+    "labelled": " · Labelled: {labelled}",
+    "no_folder": "Open a segments folder to begin the review."
   },
   "meta_row": {
-    "score": "score",
-    "site": "site",
-    "date": "date",
-    "folder": "folder",
-    "extra": "extra",
-    "no_label": "no label",
-    "predicted": "predicted"
+    "score": "Score",
+    "site": "Site",
+    "date": "Date",
+    "folder": "Folder",
+    "extra": "Other",
+    "no_label": "No label",
+    "predicted": "Predicted"
   },
   "spec": {
     "type": "Type:",
     "mel": "Mel",
     "fft": "FFT (linear)",
     "log": "FFT (log)",
-    "fmin": "Min Hz:",
-    "fmax": "Max Hz:",
-    "db": "dB floor:",
-    "nyquist": "(Max Hz = 0 → Nyquist)",
-    "error": "Spectrogram error: {error}",
+    "fmin": "Minimum (Hz):",
+    "fmax": "Maximum (Hz):",
+    "db": "Floor (dB):",
+    "nyquist": "(a maximum of 0 is the Nyquist frequency)",
+    "error": "The spectrogram could not be rendered: {error}",
     "loading": "Rendering spectrogram…"
   },
   "nav": {
-    "prev": "← Prev",
+    "prev": "← Previous",
     "true": "✔  Correct",
-    "false": "✘  Wrong",
-    "unsure": "?  Unsure",
+    "false": "✘  Incorrect",
+    "unsure": "?  Uncertain",
     "next": "Next →",
-    "true_hint": "The prediction is in the clip — saved with any other label selected (T)",
-    "false_hint": "The prediction is not in the clip — saved as the labels selected, or as nothing on the list (F)",
-    "unsure_hint": "Cannot tell — filed apart and left out of the counts (U)",
+    "true_hint": "The predicted label is present in the clip. Any other selected labels are saved with it (T).",
+    "false_hint": "The predicted label is not present in the clip. The selected labels, if any, are saved in its place (F).",
+    "unsure_hint": "The clip cannot be assessed. It is filed separately and excluded from the correct and incorrect counts (U).",
     "true_plus": "✔  Correct + {labels}",
-    "false_to": "✘  Wrong → {labels}",
-    "false_none": "✘  Wrong · nothing on the list",
+    "false_to": "✘  Incorrect → {labels}",
+    "false_none": "✘  Incorrect · no label from the list",
     "save_labels": "✔  Save: {labels}",
-    "save_none": "✔  Save · nothing on the list"
+    "save_none": "✔  Save · no label from the list"
   },
   "labels": {
     "row": "Labels:",
-    "selected": "Labels for this segment — click to toggle:",
-    "manage": "Add or remove labels from the list",
-    "manage_on": "Done editing the list",
+    "selected": "Labels for this segment (click to select or deselect):",
+    "manage": "Edit the label list",
+    "manage_on": "Finish editing the label list",
     "add": "Add",
     "add_placeholder": "New label",
     "remove": "Remove “{label}” from the list",
-    "empty": "No labels on the list yet — add one below.",
-    "saved_to": "List saved to {path}",
-    "not_saved": "List not saved: {error}",
-    "session_only": "List kept for this session only.",
-    "others": "Anything else in this clip — or what it really is? Click to toggle:",
+    "empty": "The label list is empty. Add a label below.",
+    "saved_to": "The list is saved to {path}",
+    "not_saved": "The list could not be saved: {error}",
+    "session_only": "The list is kept for this session only.",
+    "others": "Additional or corrected labels (click to select or deselect):",
     "predicted_tag": "◆ predicted",
-    "predicted_hint": "The model's prediction — answer it with Correct or Wrong"
+    "predicted_hint": "The model's prediction. Assess it with Correct or Incorrect."
   },
   "annotations": {
     "label": "Annotation table",
-    "rows": "{count} row(s) added → {path}",
-    "no_path": "no file path set — nothing will be written",
-    "read_error": "could not read segment_sources.csv: {error}",
-    "norec": "{count} row(s) with no source recording: {why}",
-    "why_missing": "there is no segment_sources.csv in the segments folder",
-    "why_unlisted": "those clips are not listed in segment_sources.csv"
+    "rows": "Rows written: {count} — {path}",
+    "no_path": "No file path is set; nothing will be written.",
+    "read_error": "segment_sources.csv could not be read: {error}",
+    "norec": "Rows without a source recording: {count} ({why})",
+    "why_missing": "segment_sources.csv was not found in the segments folder",
+    "why_unlisted": "these clips are not listed in segment_sources.csv"
   },
   "shortcuts": {
     "title": "Keyboard shortcuts",
     "prev": "Previous segment",
     "next": "Next segment",
-    "true": "Predicted label is correct",
-    "false": "Predicted label is wrong",
-    "play": "Play / pause audio",
+    "true": "Mark the predicted label as correct",
+    "false": "Mark the predicted label as incorrect",
+    "play": "Play or pause the audio",
     "close": "Close",
-    "labels": "Toggle the 1st…9th label",
-    "unsure": "Unsure"
+    "labels": "Select or deselect labels 1 to 9",
+    "unsure": "Mark the segment as uncertain"
   },
   "errors": {
-    "network": "Could not reach the reviewer server.",
-    "unauthorized": "Wrong or missing access token."
+    "network": "The reviewer server could not be reached.",
+    "unauthorized": "The access token is missing or invalid."
   },
   "cli": {
     "folder": "Segments folder",
     "output": "Reviewed to",
     "pending": "Pending review",
     "already_correct": "Already correct",
-    "already_wrong": "Already wrong",
-    "already_unsure": "Already unsure",
+    "already_incorrect": "Already incorrect",
+    "already_uncertain": "Already uncertain",
     "already_labelled": "Already labelled",
     "review_log": "Review log",
     "labels": "Label list",
@@ -128,23 +128,23 @@
     "pattern": "Filename pattern",
     "labels_file": "Label list file",
     "pattern_match": "Names read by it",
-    "pattern_none": "The filename pattern read none of the {total} pending file names, so no site, time or score is shown. Check it against a real name:",
-    "pattern_some": "The filename pattern read only {matched} of the {total} pending file names; the rest show no site, time or score. One it missed:",
+    "pattern_none": "The filename pattern matched none of the {total} pending file names; site, time and score are therefore not shown. Example of an unmatched name:",
+    "pattern_some": "The filename pattern matched {matched} of the {total} pending file names; the remainder show no site, time or score. Example of an unmatched name:",
     "pattern_example": "{name}",
     "folder_none": "none yet — open one in the browser"
   },
   "folder": {
-    "placeholder": "Segments folder to review — /path/to/segments or ssh://host/path",
-    "hint": "Type a folder and press Enter, or pick one with Browse. Opening a folder writes nothing to it until the first segment is reviewed.",
+    "placeholder": "Path to the segments folder (local path or ssh://host/path)",
+    "hint": "Type a folder path and press Enter, or select one with Browse. Nothing is written to a folder until its first segment is reviewed.",
     "browse": "Browse…",
     "open": "Open"
   },
   "browse": {
-    "title": "Choose a segments folder",
-    "up": "↑ Up",
+    "title": "Select a segments folder",
+    "up": "↑ Parent folder",
     "open_here": "Open this folder",
     "cancel": "Cancel",
-    "empty": "No folders in here.",
-    "wavs_here": "{count} .wav file(s) directly in this folder"
+    "empty": "This folder contains no subfolders.",
+    "wavs_here": "WAV files in this folder: {count}"
   }
 }

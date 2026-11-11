@@ -5,8 +5,8 @@
 A command-line tool that serves a **browser GUI for reviewing a folder of audio
 segments**. Each clip is shown as a spectrogram with whatever its folder and file
 name say about it; you listen to it and say **what is in it**. Whether the label
-it came with was **correct** or **wrong** follows from that answer. Reviewed
-clips are moved into `correct/`, `wrong/` or `unsure/`, every review is logged to
+it came with was **correct** or **incorrect** follows from that answer. Reviewed
+clips are moved into `correct/`, `incorrect/` or `uncertain/`, every review is logged to
 `reviews.csv` — prediction, outcome and what was really heard — and the confirmed
 labels can be written to an annotation table.
 
@@ -162,20 +162,20 @@ opens on the folder box alone.
 
 | Control | What it does |
 | --- | --- |
-| **Label buttons** | Anything *else* in this clip — or what it really is. Every segment starts with none selected; click to pick a label, click again to drop it. The prediction's own button is marked **◆ predicted** and locked: it is answered by Correct or Wrong, not by clicking it. <kbd>1</kbd>…<kbd>9</kbd> hit the first nine. |
+| **Label buttons** | Anything *else* in this clip — or what it really is. Every segment starts with none selected; click to pick a label, click again to drop it. The prediction's own button is marked **◆ predicted** and locked: it is answered by Correct or Incorrect, not by clicking it. <kbd>1</kbd>…<kbd>9</kbd> hit the first nine. |
 | **✔ Correct** | The prediction is right. Saved as the prediction plus any label selected — a second species singing too. The button says what it will save: *✔ Correct + PHYLUT*. |
-| **✘ Wrong** | The prediction is wrong. Saved as the labels selected — what the clip really is — or, with none, as holding nothing on the list. The button says which: *✘ Wrong → TURDRU*, *✘ Wrong · nothing on the list*. |
-| **? Unsure** | Cannot tell. Filed under `unsure/`, kept out of the correct/wrong tallies and out of the annotation table. |
-| **← Prev / Next →** | Browse without making a decision. |
+| **✘ Incorrect** | The prediction is wrong. Saved as the labels selected — what the clip really is — or, with none, as holding no label from the list. The button says which: *✘ Incorrect → TURDRU*, *✘ Incorrect · no label from the list*. |
+| **? Uncertain** | The clip cannot be assessed. Filed under `uncertain/`, kept out of the correct/incorrect tallies and out of the annotation table. |
+| **← Previous / Next →** | Browse without making a decision. |
 | **Type / Min Hz / Max Hz / dB floor** | Redraw the spectrogram instantly — mel, linear-Hz or log-Hz frequency axis. The audio player is not touched, so a clip keeps playing while you change the view. |
 | **✎** | Edit the label list itself: each button grows a **×** to drop it, and the box below adds a new one. Changes are saved to `labels.txt` in the segments folder. |
 | **⟳** | Re-read the folder, e.g. after more segments arrive. |
 | **Language** | Switch the interface between English and Português. |
 | **◐ / ☀ / ☾** | Theme: follow the system, light, or dark — click to cycle. A chosen theme is remembered in this browser. The spectrogram keeps its colours in both. |
 
-The prediction is the question, and Correct or Wrong is the answer; the label
+The prediction is the question, and Correct or Incorrect is the answer; the label
 buttons only add what else is there. Nothing is ever pre-selected, so a segment
-rejected without a second thought is saved as "nothing on the list" — never with
+rejected without a second thought is saved as "no label from the list" — never with
 a label left over from the clip before. With no prediction to judge, a single
 **✔ Save** button files the labels selected. The server works the outcome out
 again from the labels it receives — one rule, in one place:
@@ -184,15 +184,15 @@ again from the labels it receives — one rule, in one place:
 | --- | --- |
 | the prediction | correct |
 | the prediction and others | correct (the others are logged as *added*) |
-| other labels only | wrong, and the clip is really those |
-| nothing | wrong, and the clip holds nothing on the list |
-| anything, with Unsure | unsure |
+| other labels only | incorrect, and the clip is really those |
+| nothing | incorrect, and the clip holds nothing on the list |
+| anything, with Uncertain | uncertain |
 
 Several labels can be given to one segment — two species singing at once — which
 is the default; `--no-multi-label` restricts each segment to one.
 
 Keyboard: <kbd>←</kbd> <kbd>→</kbd> to browse, <kbd>T</kbd> / <kbd>F</kbd> /
-<kbd>U</kbd> for correct / wrong / unsure, <kbd>1</kbd>…<kbd>9</kbd> to toggle
+<kbd>U</kbd> for correct / incorrect / uncertain, <kbd>1</kbd>…<kbd>9</kbd> to toggle
 the first nine labels, <kbd>Space</kbd> to play or pause.
 
 ### The label list
@@ -220,7 +220,7 @@ edits last only for the session.
 
 A reviewed clip is filed under its **outcome**, then the path it had — the
 **prediction's** folder included. Each folder answers one question:
-`wrong/PONTO_A/BOAALB/` holds exactly the clips the model called BOAALB and got
+`incorrect/PONTO_A/BOAALB/` holds exactly the clips the model called BOAALB and got
 wrong, so counting a folder is that class's precision. The labels you added go
 on the end of the file name, so the tree reads without opening the log:
 
@@ -228,20 +228,20 @@ on the end of the file name, so the tree reads without opening the log:
 PONTO_A/BOAALB/clip.wav
    ├── ✔ Correct                 →  correct/PONTO_A/BOAALB/clip.wav
    ├── ✔ Correct, + PHYLUT       →  correct/PONTO_A/BOAALB/clip_PHYLUT.wav
-   ├── ✘ Wrong, really TURDRU    →  wrong/PONTO_A/BOAALB/clip_TURDRU.wav
-   ├── ✘ Wrong, TURDRU + PHYLUT  →  wrong/PONTO_A/BOAALB/clip_TURDRU_PHYLUT.wav
-   ├── ✘ Wrong, nothing          →  wrong/PONTO_A/BOAALB/clip.wav
-   └── ? Unsure                  →  unsure/PONTO_A/BOAALB/clip.wav
+   ├── ✘ Incorrect, TURDRU       →  incorrect/PONTO_A/BOAALB/clip_TURDRU.wav
+   ├── ✘ Incorrect, TURDRU+PHYLUT →  incorrect/PONTO_A/BOAALB/clip_TURDRU_PHYLUT.wav
+   ├── ✘ Incorrect, nothing      →  incorrect/PONTO_A/BOAALB/clip.wav
+   └── ? Uncertain               →  uncertain/PONTO_A/BOAALB/clip.wav
 ```
 
 - A file name **gains every label added beyond the prediction**, in the order
   they were selected, with spaces written as `_` (`chuva forte` → `_chuva_forte`).
   The original name is kept whole in front of them. With nothing added — a plain
-  Correct, or a Wrong holding nothing on the list — and for anything marked
-  Unsure, the name is left exactly as it was found.
+  Correct, or an Incorrect holding no label from the list — and for anything
+  marked Uncertain, the name is left exactly as it was found.
 - Under `--label-depth`, the folders *below* the label are **not** rebuilt:
   `BOAALB/PONTO_A/20240115/clip.wav` corrected to TURDRU becomes
-  `wrong/BOAALB/clip_TURDRU.wav` — one folder per predicted label, holding the
+  `incorrect/BOAALB/clip_TURDRU.wav` — one folder per predicted label, holding the
   clips themselves.
 - A clip that came with **no label** has no prediction to be right or wrong
   about: it is filed under `labelled/`, keeping the folders it sat in, and every
@@ -253,7 +253,7 @@ PONTO_A/BOAALB/clip.wav
   with any parent it empties, so the pending tree shrinks as the review goes on.
   A folder still holding anything — a pending clip, a stray file — is left alone,
   and the segments folder itself is never removed.
-- Clips already inside `correct/`, `wrong/`, `unsure/` or `labelled/` are
+- Clips already inside `correct/`, `incorrect/`, `uncertain/` or `labelled/` are
   excluded from the pending list, so a review can be spread over several sessions.
 
 **Writing somewhere else.** `--output` (or `-o`) puts the verdict folders and the
@@ -268,7 +268,7 @@ A relative path is read against the segments folder (`-o reviewed` →
 `/data/segments/reviewed/`), an absolute one is taken as given, and over SSH it
 is a path on the remote machine. The annotation table follows it too, unless
 `--annotations-path` says otherwise. Pass the same `--output` again to resume a
-review: that is where the "already correct/wrong" tallies are counted, and clips
+review: that is where the "already correct/incorrect" tallies are counted, and clips
 already written there are never handed back as pending.
 
 ### The review log
@@ -281,13 +281,13 @@ It is always written, and it is the record of the review:
 | `reviewed_at` | When, with the time zone |
 | `source`, `destination` | Where the clip was, relative to the segments folder, and where it went, relative to the output folder |
 | `predicted`, `score` | The label the clip came with, and the score its name carried |
-| `outcome` | `correct`, `wrong`, `unsure` or `labelled` |
+| `outcome` | `correct`, `incorrect`, `uncertain` or `labelled` |
 | `labels` | What the reviewer says the clip holds, `;`-separated; empty for nothing on the list |
 | `added` | Those labels other than the prediction: the correction, or a second species |
 | `site`, `recording`, `start_time`, `end_time` | As in the annotation table below |
 
-Per-class precision is `correct / (correct + wrong)` grouped by `predicted`, and
-`predicted` against `labels` for the wrong rows is the confusion between classes.
+Per-class precision is `correct / (correct + incorrect)` grouped by `predicted`, and
+`predicted` against `labels` for the incorrect rows is the confusion between classes.
 If the log cannot be written, the clip is moved back and the review is refused —
 a clip is never filed without its row.
 
@@ -296,7 +296,7 @@ a clip is never filed without its row.
 With `--annotations`, every label a segment is **confirmed to hold** is appended
 to a CSV with columns `site, file, label, start_time, end_time` — one row per
 label, so a segment with two species gives two rows. A rejected prediction never
-appears in it, and neither do clips marked unsure or found to hold nothing on the
+appears in it, and neither do clips marked uncertain or found to hold nothing on the
 list. The times are the clip's position inside the recording it was cut from,
 taken from its name and widened to the clip's real duration (so any padding is
 included).
@@ -363,7 +363,7 @@ segment-reviewer ~/segments \
 `--label-from` chooses: `folder` (the default), `filename` (the pattern's `label`
 group), or `none`. A pattern that captures a `label` group switches to `filename`
 on its own unless you say otherwise — and in that mode the clip is filed flat,
-under its outcome and its predicted label: `wrong/BOAALB/clip_TURDRU.wav`.
+under its outcome and its predicted label: `incorrect/BOAALB/clip_TURDRU.wav`.
 
 To keep the folders instead, say so. With segments filed as
 `[label]/[site]_YYYYMMDD/clip.wav`, this reads the label off the top folder,
@@ -387,10 +387,10 @@ segment-reviewer ~/vector_search_segments --filename-pattern vector-search --ann
 ```
 
 Because the label lives in the name there, clips are filed flat under their
-outcome and predicted label — `correct/BOAALB/`, `wrong/BOAALB/` — and the
+outcome and predicted label — `correct/BOAALB/`, `incorrect/BOAALB/` — and the
 labels added go on the end of the name as anywhere else: a segment called
 `..._0.873_BOAALB.wav` and corrected to TURDRU becomes
-`wrong/BOAALB/..._0.873_BOAALB_TURDRU.wav`. The score is shown next to the label
+`incorrect/BOAALB/..._0.873_BOAALB_TURDRU.wav`. The score is shown next to the label
 in the GUI, and logged too.
 
 ---
@@ -505,7 +505,7 @@ segment-reviewer [SEGMENTS] [OPTIONS]
 
 ### Verdict folders and language
 
-The verdict folders are always `correct/`, `wrong/`, `unsure/` and `labelled/`,
+The verdict folders are always `correct/`, `incorrect/`, `uncertain/` and `labelled/`,
 and the review log always writes those outcome names, whichever language the
 interface is in — the data a review writes never depends on who reviewed it.
 

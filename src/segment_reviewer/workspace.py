@@ -50,14 +50,14 @@ class Workspace:
         """
         spec = str(spec or "").strip()
         if not spec:
-            raise OpenError("no folder given")
+            raise OpenError("No folder was specified.")
         try:
             backend = self._open_backend(spec)
         except Exception as exc:  # noqa: BLE001 - a connection or path problem
-            raise OpenError(f"could not open {spec}: {exc}") from exc
+            raise OpenError(f"The folder {spec} could not be opened: {exc}") from exc
         try:
             if not backend.isdir(backend.root):
-                raise OpenError(f"not a folder: {backend.display}")
+                raise OpenError(f"{backend.display} is not a folder.")
             session = ReviewSession(backend, replace(self.config, segments=spec))
             pattern = session.pattern_report()
         except Exception:
@@ -86,14 +86,14 @@ def browse(path: str | None, *, start: str | None = None) -> dict:
     """
     raw = str(path or "").strip()
     if raw and parse_ssh_spec(raw) is not None:
-        raise OpenError("remote folders cannot be browsed — type the ssh:// path instead")
+        raise OpenError("Remote folders cannot be browsed; enter the ssh:// path instead.")
     here = Path(os.path.expanduser(raw or start or "~")).resolve()
     while not here.is_dir() and here != here.parent:
         here = here.parent        # a half-typed path browses its nearest folder
     try:
         entries = list(os.scandir(here))
     except OSError as exc:
-        raise OpenError(f"cannot list {here}: {exc.strerror or exc}") from exc
+        raise OpenError(f"The folder {here} could not be listed: {exc.strerror or exc}") from exc
 
     folders, wavs = [], 0
     for entry in entries:

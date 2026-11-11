@@ -79,17 +79,17 @@
    *
    * The chips say what is in the clip; the button only says what that means for
    * the prediction, so the two can never disagree:
-   *   correct — the prediction is in the clip, along with anything else selected
-   *             (with one label per segment, the prediction alone);
-   *   wrong   — the prediction is not: whatever else is selected is what the clip
-   *             really holds, and nothing selected means nothing on the list;
-   *   unsure  — the selection as it stands, kept as a guess.
+   *   correct   — the prediction is in the clip, along with anything else
+   *               selected (with one label per segment, the prediction alone);
+   *   incorrect — the prediction is not: whatever else is selected is what the
+   *               clip really holds, and nothing selected means nothing on the list;
+   *   uncertain — the selection as it stands, kept as a guess.
    * A clip that came with no prediction has nothing to be right about, so every
    * button saves the selection. The server works the outcome out again from
    * these labels — it never takes the button's word for it. */
   function reviewLabels(kind, selection, predicted, single) {
     const chosen = (selection || []).slice();
-    if (!predicted || kind === 'unsure') return chosen;
+    if (!predicted || kind === 'uncertain') return chosen;
     const others = chosen.filter((x) => x !== predicted);
     if (kind === 'correct') return single ? [predicted] : [predicted].concat(others);
     return others;

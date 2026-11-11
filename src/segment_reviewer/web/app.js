@@ -148,8 +148,8 @@
       // The first nine get a number, matching the 1…9 keyboard shortcuts.
       pick.innerHTML = (i < 9 ? `<kbd>${i + 1}</kbd>` : '') + escapeHtml(label)
         + (isPrediction ? ` <span class="chip-tag">${t('labels.predicted_tag')}</span>` : '');
-      // The prediction is answered by Correct / Wrong, never by its chip: a
-      // chip that could be lit while Wrong is pressed is the contradiction
+      // The prediction is answered by Correct / Incorrect, never by its chip: a
+      // chip that could be lit while Incorrect is pressed is the contradiction
       // this layout exists to rule out.
       pick.disabled = isPrediction;
       if (isPrediction) pick.title = t('labels.predicted_hint');
@@ -189,7 +189,7 @@
     const extra = reviewLabels('correct', app.selection, p, !app.multi).filter((x) => x !== p);
     el.btnTrue.innerHTML = extra.length
       ? t('nav.true_plus', { labels: list(extra) }) : t('nav.true');
-    const really = reviewLabels('wrong', app.selection, p, !app.multi);
+    const really = reviewLabels('incorrect', app.selection, p, !app.multi);
     el.btnFalse.innerHTML = really.length
       ? t('nav.false_to', { labels: list(really) }) : t('nav.false_none');
   }
@@ -209,7 +209,7 @@
   }
 
   function pickLabel(label) {
-    if (label === predicted()) return;   // answered by Correct / Wrong instead
+    if (label === predicted()) return;   // answered by Correct / Incorrect instead
     // One label at a time unless multi-label is on.
     app.selection = toggleLabel(app.selection, label, !app.multi);
     renderLabels();
@@ -301,8 +301,8 @@
     const c = app.state.counts || {};
     if (!app.state.folder) { el.counts.textContent = ''; return; }
     el.counts.textContent = t('progress.counts', {
-      pending: c.pending ?? 0, correct: c.correct ?? 0, wrong: c.wrong ?? 0,
-      unsure: c.unsure ?? 0,
+      pending: c.pending ?? 0, correct: c.correct ?? 0, incorrect: c.incorrect ?? 0,
+      uncertain: c.uncertain ?? 0,
     }) + (c.labelled ? t('progress.labelled', { labelled: c.labelled }) : '');
   }
 
@@ -363,7 +363,7 @@
     if (!seg) {
       // Hide the viewer rather than leaving an empty frame in place.
       const c = app.state.counts || {};
-      const done = (c.correct || c.wrong || c.unsure || c.labelled);
+      const done = (c.correct || c.incorrect || c.uncertain || c.labelled);
       el.progress.className = 'progress done';
       el.progress.innerHTML = done ? t('progress.done') : t('progress.empty');
       el.error.textContent = '';
@@ -383,8 +383,8 @@
 
     if (!keepSelection) {
       // Every segment starts with nothing selected. The prediction is the
-      // question Correct / Wrong answer, not a chip that is already lit — so a
-      // reviewer who presses Wrong without touching anything saves "nothing on
+      // question Correct / Incorrect answer, not a chip that is already lit — so a
+      // reviewer who presses Incorrect without touching anything saves "nothing on
       // the list", never a label carried over from what was on screen before.
       app.selection = [];
     }
@@ -423,7 +423,7 @@
     app.busy = true;
     try {
       app.state = await post('/api/review', {
-        relpath: seg.relpath, labels, unsure: kind === 'unsure',
+        relpath: seg.relpath, labels, uncertain: kind === 'uncertain',
       });
       render();
     } catch (err) {
@@ -523,8 +523,8 @@
   }
 
   const markCorrect = () => review('correct');
-  const markWrong = () => review('wrong');
-  const markUnsure = () => review('unsure');
+  const markIncorrect = () => review('incorrect');
+  const markUncertain = () => review('uncertain');
 
   async function setLanguage(code, { persist = true } = {}) {
     const data = await api(`/api/i18n/${encodeURIComponent(code)}`);
@@ -541,8 +541,8 @@
   el.btnPrev.addEventListener('click', () => nav(-1));
   el.btnNext.addEventListener('click', () => nav(+1));
   el.btnTrue.addEventListener('click', markCorrect);
-  el.btnFalse.addEventListener('click', markWrong);
-  el.btnUnsure.addEventListener('click', markUnsure);
+  el.btnFalse.addEventListener('click', markIncorrect);
+  el.btnUnsure.addEventListener('click', markUncertain);
   el.btnRescan.addEventListener('click', () => {
     if (app.state.folder) run(() => post('/api/rescan'));
   });
@@ -605,8 +605,8 @@
       ArrowLeft: () => nav(-1),
       ArrowRight: () => nav(+1),
       t: markCorrect, T: markCorrect,
-      f: markWrong, F: markWrong,
-      u: markUnsure, U: markUnsure,
+      f: markIncorrect, F: markIncorrect,
+      u: markUncertain, U: markUncertain,
     };
     const action = keys[e.key];
     if (action) { e.preventDefault(); action(); }

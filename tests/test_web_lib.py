@@ -150,7 +150,7 @@ def test_a_selected_label_missing_from_the_list_still_gets_a_button():
 
 @node
 def test_each_button_reads_the_selection_one_way():
-    """Correct always keeps the prediction, wrong always drops it — whatever
+    """Correct always keeps the prediction, incorrect always drops it — whatever
     the chips say, the two buttons can never file a contradiction."""
     out = run("""
       const P = 'BOAALB';
@@ -159,9 +159,9 @@ def test_each_button_reads_the_selection_one_way():
         correctPlus:   lib.reviewLabels('correct', ['BOAALB', 'PHYLUT'], P, false),
         correctReAdds: lib.reviewLabels('correct', ['PHYLUT'], P, false),
         correctSingle: lib.reviewLabels('correct', ['TURDRU'], P, true),
-        wrongUntouched: lib.reviewLabels('wrong', ['BOAALB'], P, false),
-        wrongTo:       lib.reviewLabels('wrong', ['BOAALB', 'TURDRU'], P, false),
-        unsure:        lib.reviewLabels('unsure', ['TURDRU'], P, false),
+        wrongUntouched: lib.reviewLabels('incorrect', ['BOAALB'], P, false),
+        wrongTo:       lib.reviewLabels('incorrect', ['BOAALB', 'TURDRU'], P, false),
+        uncertain:        lib.reviewLabels('uncertain', ['TURDRU'], P, false),
         noPrediction:  lib.reviewLabels('correct', ['rain'], '', false),
       }));
     """)
@@ -172,7 +172,7 @@ def test_each_button_reads_the_selection_one_way():
         "correctSingle": ["BOAALB"],
         "wrongUntouched": [],
         "wrongTo": ["TURDRU"],
-        "unsure": ["TURDRU"],
+        "uncertain": ["TURDRU"],
         "noPrediction": ["rain"],
     }
 

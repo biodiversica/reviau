@@ -53,16 +53,16 @@
           <option value="log" data-i18n="spec.log">FFT (log)</option>
         </select>
       </label>
-      <label><span data-i18n="spec.fmin">Min Hz:</span>
+      <label><span data-i18n="spec.fmin">Minimum (Hz):</span>
         <input id="spec-fmin" type="number" min="0" max="96000" step="100" value="0">
       </label>
-      <label><span data-i18n="spec.fmax">Max Hz:</span>
+      <label><span data-i18n="spec.fmax">Maximum (Hz):</span>
         <input id="spec-fmax" type="number" min="0" max="96000" step="100" value="0">
       </label>
-      <label><span data-i18n="spec.db">dB floor:</span>
+      <label><span data-i18n="spec.db">Floor (dB):</span>
         <input id="spec-db" type="number" min="-120" max="-20" step="5" value="-80">
       </label>
-      <span class="hint" data-i18n="spec.nyquist">(Max Hz = 0 → Nyquist)</span>
+      <span class="hint" data-i18n="spec.nyquist">(a maximum of 0 is the Nyquist frequency)</span>
     </section>
 
     <figure class="spec-wrap" id="spec-wrap">
@@ -87,10 +87,10 @@
     </section>
 
     <div id="nav-row" class="row nav">
-      <button id="btn-prev" class="btn" data-i18n="nav.prev">← Prev</button>
+      <button id="btn-prev" class="btn" data-i18n="nav.prev">← Previous</button>
       <button id="btn-true" class="btn ok" data-i18n="nav.true" data-i18n-title="nav.true_hint">✔ Correct</button>
-      <button id="btn-false" class="btn no" data-i18n="nav.false" data-i18n-title="nav.false_hint">✘ Wrong</button>
-      <button id="btn-unsure" class="btn" data-i18n="nav.unsure" data-i18n-title="nav.unsure_hint">? Unsure</button>
+      <button id="btn-false" class="btn no" data-i18n="nav.false" data-i18n-title="nav.false_hint">✘ Incorrect</button>
+      <button id="btn-unsure" class="btn" data-i18n="nav.unsure" data-i18n-title="nav.unsure_hint">? Uncertain</button>
       <button id="btn-next" class="btn" data-i18n="nav.next">Next →</button>
     </div>
 
@@ -103,9 +103,9 @@
   </footer>
 
   <dialog id="browse-dialog" class="browse">
-    <h2 data-i18n="browse.title">Choose a segments folder</h2>
+    <h2 data-i18n="browse.title">Select a segments folder</h2>
     <div class="browse-path">
-      <button type="button" id="browse-up" class="btn small" data-i18n="browse.up">↑ Up</button>
+      <button type="button" id="browse-up" class="btn small" data-i18n="browse.up">↑ Parent folder</button>
       <code id="browse-here"></code>
     </div>
     <ul id="browse-list" class="browse-list"></ul>

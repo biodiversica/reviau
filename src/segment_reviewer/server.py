@@ -32,7 +32,7 @@ class ReviewBody(BaseModel):
 
     relpath: str | None = None
     labels: list[str] = []
-    unsure: bool = False
+    uncertain: bool = False
 
 
 class NavBody(BaseModel):
@@ -156,7 +156,7 @@ def create_app(workspace: Workspace, config: ReviewConfig,
         """The open session; every clip-level call needs one."""
         session = workspace.session
         if session is None:
-            raise HTTPException(status_code=409, detail="no segments folder is open")
+            raise HTTPException(status_code=409, detail="No segments folder is open.")
         return session
 
     # ── access token ─────────────────────────────────────────────────────────
@@ -244,7 +244,7 @@ def create_app(workspace: Workspace, config: ReviewConfig,
         except OpenError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except Exception as exc:  # noqa: BLE001 - shown to the reviewer verbatim
-            raise HTTPException(status_code=400, detail=f"could not open {body.path}: {exc}") from exc
+            raise HTTPException(status_code=400, detail=f"The folder {body.path} could not be opened: {exc}") from exc
         app.state.pattern = opened.pattern
         return {**_state_payload(workspace), "pattern": _pattern_payload(opened.pattern)}
 
@@ -294,7 +294,7 @@ def create_app(workspace: Workspace, config: ReviewConfig,
     async def review(body: ReviewBody):
         session = current()
         try:
-            result = session.review(body.labels, unsure=body.unsure, relpath=body.relpath)
+            result = session.review(body.labels, uncertain=body.uncertain, relpath=body.relpath)
         except StaleSegment as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         except ValueError as exc:
