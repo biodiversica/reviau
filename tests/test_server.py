@@ -29,7 +29,7 @@ def test_bootstrap_carries_everything_the_gui_needs(client):
 def test_index_page_is_served(client):
     api, _ = client
     body = api.get("/").text
-    assert "app.js" in body and "Segment Reviewer" in body
+    assert "app.js" in body and "segment-reviewer" in body
 
 
 def test_translations_endpoint(client):

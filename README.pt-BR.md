@@ -1,30 +1,34 @@
-# Revisor de Segmentos
+# segment-reviewer
 
 [← English](README.md)
 
-Uma ferramenta de linha de comando que serve uma **interface no navegador para
-revisar uma pasta de segmentos de áudio**. Cada clipe aparece como espectrograma,
-com o que sua pasta e seu nome de arquivo demonstram sobre ele; você escuta e diz
-**o que há nele**. Se o rótulo com que ele chegou estava **correto** ou **incorreto**
-decorre dessa resposta. Os clipes revisados são movidos para `correct/`, `incorrect/`
-ou `uncertain/`, cada revisão é registrada em `reviews.csv` — previsão, resultado e o
-que foi realmente ouvido — e os rótulos confirmados podem ir para uma tabela de
-anotações.
+O segment-reviewer é uma ferramenta de linha de comando que disponibiliza uma
+**interface no navegador para a revisão de uma pasta de segmentos de áudio**.
+Cada clipe é apresentado como espectrograma, acompanhado das informações
+fornecidas pela sua pasta e pelo nome do seu arquivo. O revisor ouve o clipe e
+registra **o que ele contém**; a avaliação do rótulo com que o clipe chegou, como
+**correto** ou **incorreto**, decorre dessa resposta. Os clipes revisados são
+movidos para `correct/`, `incorrect/` ou `uncertain/`, cada revisão é registrada
+em `reviews.csv` (previsão, resultado e os rótulos efetivamente identificados), e
+os rótulos confirmados podem também ser gravados numa tabela de anotações.
 
-Funciona com qualquer conjunto de clipes, não importa como tenham sido gerados —
-a saída de um detector, exemplos recortados à mão, as previsões de um
-classificador a ser ser avalido. A pasta de segmentos pode ser **local** ou **remota via
-SSH**, e a interface pode ser servida para **outra máquina** na sua rede local ou
-Tailscale. A interface está disponível em **Português (Brasil)** e **Inglês**.
+A ferramenta aceita qualquer conjunto de clipes, independentemente de como tenha
+sido produzido: a saída de um detector, exemplos recortados manualmente ou as
+previsões de um classificador a ser validado. A pasta de segmentos pode ser
+**local** ou **remota, via SSH**, e a interface pode ser disponibilizada para
+**outra máquina** numa rede local ou numa rede Tailscale. A interface está
+disponível em **Português (Brasil)** e **Inglês**.
 
 ---
 
 ## Como um segmento é lido
 
-Duas fontes independentes, ambas configuráveis:
+As informações de um segmento provêm de duas fontes independentes, ambas
+configuráveis.
 
-**O nome da pasta fornece o rótulo.** Um conjunto revisado costuma ser organizado com uma
-pasta por classe, então a pasta em que o clipe está é o rótulo que ele carrega:
+**A pasta fornece o rótulo.** Um conjunto em revisão costuma ser organizado com
+uma pasta por classe, de modo que a pasta em que o clipe se encontra é o rótulo
+que ele carrega:
 
 ```
 segmentos/
@@ -33,40 +37,43 @@ segmentos/
 └── chuva/POCA_20240116_200000_5.0_10.0_det4.wav                → rótulo chuva
 ```
 
-As pastas acima do rótulo são mantidas como estão — `2024/campo/PONTO_A/BOAALB/`
-rotula o clipe como `BOAALB` e lembra das três pastas acima dele. Um clipe
-diretamente na pasta de segmentos simplesmente ainda não tem rótulo.
+As pastas acima do rótulo são preservadas: `2024/campo/PONTO_A/BOAALB/` rotula o
+clipe como `BOAALB` e mantém as três pastas acima dele. Um clipe situado
+diretamente na pasta de segmentos não tem rótulo.
 
-**A pasta da classe vem primeiro?** Alguns conjuntos são organizados ao
-contrário, com os pontos *dentro* de cada pasta de classe. Diga qual nível carrega
-o rótulo com `--label-depth`, contando a partir da pasta de segmentos. As pastas
-abaixo dele são percorridas e depois deixadas de lado — não são oferecidas como
-rótulos, e o veredito arquiva o clipe sob o rótulo apenas, já que o ponto e o dia
-estão no próprio nome do arquivo:
+**Conjuntos com a pasta da classe no topo.** Alguns conjuntos são organizados de
+forma inversa, com os pontos *dentro* de cada pasta de classe. Nesse caso,
+`--label-depth` indica qual nível carrega o rótulo, contado a partir da pasta de
+segmentos. As pastas abaixo desse nível são lidas, mas não mantidas: não são
+oferecidas como rótulos, e o clipe revisado é arquivado apenas sob o seu rótulo,
+uma vez que o ponto e a data já constam no nome do arquivo.
 
 ```
 segmentos/                             # --label-depth 1
-├── BOAALB/PONTO_A/20240115/clipe.wav  → rótulo BOAALB, as duas pastas abaixo são descartadas
+├── BOAALB/PONTO_A/20240115/clipe.wav  → rótulo BOAALB; as duas pastas abaixo não são mantidas
 ├── BOAALB/POCA/clipe.wav              → rótulo BOAALB
-└── PHYLUT/clipe.wav                   → rótulo PHYLUT (mais raso que o nível, ainda rotulado)
+└── PHYLUT/clipe.wav                   → rótulo PHYLUT (menos profundo que o nível, ainda rotulado)
 ```
 
-**O nome do arquivo fornece o resto das informações.** Por padrão um arquivo de áudio é lido como
+**O nome do arquivo fornece as demais informações.** Por padrão, o nome é lido
+como
 
 ```
 [ponto]_[AAAAMMDD]_[HHMMSS]_[início]_[fim]_*
       PONTO_A_20240115_053000_12.0_17.0_det1.wav
 ```
 
-- O ponto pode conter underscores — a referência é na data e na hora.
-- `início`/`fim` são a posição do clipe, em segundos, dentro da gravação de onde
-  ele foi cortado. Os dois separadores funcionam: `12.0_17.0` e `12.0-17.0s`.
-- `_*` é qualquer outra coisa, mostrada na interface como *extra*.
-- Tudo depois do ponto é opcional, e **um nome que não casa com nada continua
-  perfeitamente revisável** — a interface apenas mostra menos sobre ele.
+- O ponto pode conter sublinhados; a leitura é ancorada na data e na hora.
+- `início` e `fim` indicam a posição do clipe, em segundos, na gravação da qual
+  ele foi recortado. As duas formas são aceitas: `12.0_17.0` e `12.0-17.0s`.
+- `_*` corresponde a qualquer texto restante, exibido na interface como *Outros*.
+- Todas as partes após o ponto são opcionais, e **um nome que não corresponda a
+  nenhuma parte do padrão pode ainda assim ser revisado**; a interface apenas
+  exibe menos informações sobre ele.
 
-Nomeado de outro jeito? Escreva o formato com `--filename-pattern` — veja
-[Outras convenções de nome](#outras-convenções-de-nome).
+Conjuntos nomeados segundo outra convenção podem ser descritos com
+`--filename-pattern`; consulte
+[Outras convenções de nomenclatura](#outras-convenções-de-nomenclatura).
 
 ---
 
@@ -74,20 +81,20 @@ Nomeado de outro jeito? Escreva o formato com `--filename-pattern` — veja
 
 ### Com [uv](https://docs.astral.sh/uv/) (recomendado)
 
-Rodar sem instalar nada permanentemente:
+Para executar a ferramenta sem instalação permanente:
 
 ```bash
 uvx --from git+https://github.com/biodiversica/segment-reviewer segment-reviewer /caminho/dos/segmentos
 ```
 
-Ou instalar como ferramenta:
+Para instalá-la como ferramenta:
 
 ```bash
 uv tool install git+https://github.com/biodiversica/segment-reviewer
 segment-reviewer /caminho/dos/segmentos
 ```
 
-A partir de um clone, para desenvolvimento:
+Para trabalhar a partir de um clone, em desenvolvimento:
 
 ```bash
 git clone https://github.com/biodiversica/segment-reviewer
@@ -105,127 +112,138 @@ pip install git+https://github.com/biodiversica/segment-reviewer
 segment-reviewer /caminho/dos/segmentos
 ```
 
-Python 3.10 ou mais novo. A parte de áudio (librosa, soundfile) precisa da
-`libsndfile`, que já vem nos wheels de Linux, macOS e Windows.
+É necessário o Python 3.10 ou posterior. As bibliotecas de áudio (librosa e
+soundfile) dependem da `libsndfile`, que já está incluída nos wheels para Linux,
+macOS e Windows.
 
 ---
 
 ## Uso
 
 ```bash
-# Começar sem pasta e abrir uma pelo navegador
+# Iniciar sem pasta e abrir uma pelo navegador
 segment-reviewer --lang pt-BR
 
-# Abrir uma pasta local de uma vez, interface nesta máquina
+# Abrir uma pasta local na inicialização, com a interface nesta máquina
 segment-reviewer ~/segmentos --lang pt-BR
 
-# Lista suspensa restrita a estes rótulos e tabela de anotações
+# Conjunto fixo de botões de rótulo e tabela de anotações
 segment-reviewer ~/segmentos --lang pt-BR --labels "BOAALB, PHYLUT, chuva" --annotations
 
-# Segmentos num servidor, revisados do seu notebook
+# Segmentos num servidor, revisados a partir de outro computador
 segment-reviewer ssh://usuario@servidor/dados/segmentos --lang pt-BR
 
-# Servir a interface para a rede (rede local, Tailscale, …)
+# Disponibilizar a interface para a rede (rede local, Tailscale, …)
 segment-reviewer /dados/segmentos --host 0.0.0.0 --port 8765
 ```
 
-O comando imprime um resumo e a URL para abrir. Com `--host 0.0.0.0` ele também
-imprime o endereço que as outras máquinas devem usar.
+O comando exibe um resumo e o endereço a ser aberto. Com `--host 0.0.0.0`, exibe
+também o endereço que as outras máquinas devem utilizar.
 
-### Abrindo uma pasta
+### Abertura de uma pasta
 
-A **caixa de pasta** no topo da página diz qual pasta de segmentos está em
-revisão. Digite outro caminho e aperte <kbd>Enter</kbd> — ou use **Procurar…**
-para navegar pelas pastas — e essa pasta é aberta no lugar da atual, sem
-reiniciar o comando. Iniciado sem a pasta `SEGMENTOS`, a página abre só com a
-caixa de pasta.
+A **caixa de pasta**, no topo da página, indica qual pasta de segmentos está em
+revisão. Ao digitar outro caminho e pressionar <kbd>Enter</kbd>, ou ao selecionar
+uma pasta em **Procurar…**, essa pasta é aberta no lugar da atual, sem que o
+comando precise ser reiniciado. Quando o comando é iniciado sem a pasta
+`SEGMENTOS`, a página exibe apenas a caixa de pasta.
 
-- Ela aceita os mesmos caminhos da linha de comando: uma pasta local, `~/…`, ou
-  `ssh://usuario@host/caminho` para uma remota, conectada com as configurações
-  SSH da linha de comando (`--ssh-key`, `~/.ssh/config`, o agente, …).
-- Toda pasta aberta recebe as opções com que o comando foi iniciado — o padrão de
-  nome, `--label-depth`, `--output`, `--labels`, `--annotations`.
-- **Abrir uma pasta não grava nada nela.** As pastas de veredito, o registro da
-  revisão e a lista de rótulos são criados com o primeiro segmento revisado,
-  então uma pasta aberta por engano — um erro de digitação, um nível acima — fica
-  exatamente como estava. Abra a certa e siga em frente.
-- Uma pasta que não pode ser aberta é recusada com o motivo, e a revisão na tela
-  continua.
-- **Procurar…** lista as pastas da máquina onde o revisor roda — a que lê os
-  clipes, que não é a do navegador quando a interface é servida para outra
-  máquina. Pastas com clipes aparecem marcadas com ♪. Pastas remotas `ssh://` são
-  digitadas, não navegadas.
-- As pastas abertas recentemente são sugeridas enquanto você digita (guardadas
-  neste navegador).
-- Quando o padrão de nome lê poucos dos nomes da pasta recém-aberta, uma linha
-  abaixo da caixa de pasta avisa, com um nome que ficou de fora.
+- A caixa de pasta aceita os mesmos caminhos da linha de comando: uma pasta
+  local, um caminho iniciado por `~/` ou `ssh://usuario@host/caminho` para uma
+  pasta remota, acessada com as configurações SSH da linha de comando
+  (`--ssh-key`, `~/.ssh/config`, o agente SSH etc.).
+- Toda pasta aberta recebe as opções com que o comando foi iniciado: o padrão de
+  nome, `--label-depth`, `--output`, `--labels` e `--annotations`.
+- **A abertura de uma pasta não grava nada nela.** As pastas de veredito, o
+  registro da revisão e a lista de rótulos são criados quando o primeiro segmento
+  é revisado; assim, uma pasta aberta por engano, por erro de digitação ou um
+  nível acima do pretendido, permanece inalterada.
+- Uma pasta que não pode ser aberta é recusada com a respectiva explicação, e a
+  revisão em andamento não é afetada.
+- **Procurar…** lista as pastas da máquina em que o revisor é executado, que é a
+  máquina que lê os clipes; quando a interface é disponibilizada para outro
+  computador, essa não é a máquina do navegador. Pastas que contêm clipes são
+  marcadas com ♪. Pastas remotas `ssh://` não podem ser navegadas e devem ser
+  digitadas.
+- As pastas abertas recentemente são sugeridas durante a digitação. Esse
+  histórico é armazenado no navegador.
+- Quando o padrão de nome reconhece apenas parte dos nomes da pasta recém-aberta,
+  um aviso abaixo da caixa de pasta informa o fato, com um nome que não foi
+  reconhecido.
 
 ### No navegador
 
-| Controle | O que faz |
+| Controle | Função |
 | --- | --- |
-| **Botões de rótulo** | Qualquer *outra* coisa neste clipe — ou o que ele realmente é. Cada segmento começa sem nada marcado; clique para marcar um rótulo, clique de novo para desmarcar. O botão da própria previsão aparece como **◆ previsto** e travado: ele é respondido por Correto ou Incorreto, não clicando nele. <kbd>1</kbd>…<kbd>9</kbd> acionam os nove primeiros. |
-| **✔ Correto** | A previsão está certa. Salvo como a previsão mais qualquer rótulo marcado — uma segunda espécie cantando junto. O botão diz o que vai salvar: *✔ Correto + PHYLUT*. |
-| **✘ Incorreto** | A previsão está errada. Salvo com os rótulos marcados — o que o clipe realmente é — ou, sem nenhum, como sem nenhum rótulo da lista. O botão diz qual: *✘ Incorreto → TURDRU*, *✘ Incorreto · nenhum rótulo da lista*. |
-| **? Incerto** | Não é possível avaliar o clipe. Arquivado em `uncertain/`, fora das contagens de corretos/incorretos e fora da tabela de anotações. |
-| **← Anterior / Próximo →** | Navega sem decidir nada. |
-| **Tipo / Hz mín / Hz máx / dB** | Atualiza o espectrograma na hora — eixo de frequência em mel, em Hz linear ou em Hz logarítmico. O player de áudio não é afetado, então o clipe continua tocando enquanto você muda a visualização. |
-| **✎** | Edita a própria lista de rótulos: cada botão ganha um **×** para removê-lo, e a caixa abaixo adiciona um novo. As mudanças são salvas em `labels.txt`, na pasta de segmentos. |
-| **⟳** | Relê a pasta, por exemplo quando chegam mais segmentos. |
+| **Botões de rótulo** | Rótulos de qualquer *outro* conteúdo do clipe, ou do que o clipe efetivamente contém. Cada segmento começa sem rótulo selecionado; um clique seleciona o rótulo, e um novo clique desfaz a seleção. O botão do rótulo previsto é identificado como **◆ previsto** e não pode ser selecionado: a previsão é avaliada com Correto ou Incorreto. <kbd>1</kbd>…<kbd>9</kbd> selecionam os nove primeiros rótulos. |
+| **✔ Correto** | A previsão está correta. O segmento é salvo com a previsão e com qualquer rótulo selecionado, por exemplo uma segunda espécie vocalizando ao mesmo tempo. O botão indica o que será salvo: *✔ Correto + PHYLUT*. |
+| **✘ Incorreto** | A previsão está incorreta. O segmento é salvo com os rótulos selecionados, que descrevem o que o clipe efetivamente contém, ou, se nenhum estiver selecionado, como sem nenhum rótulo da lista. O botão indica o caso: *✘ Incorreto → TURDRU* ou *✘ Incorreto · nenhum rótulo da lista*. |
+| **? Incerto** | Não é possível avaliar o clipe. Ele é arquivado em `uncertain/` e excluído das contagens de corretos e incorretos e da tabela de anotações. |
+| **← Anterior / Próximo →** | Navega entre os segmentos sem registrar decisão. |
+| **Tipo / Mínimo (Hz) / Máximo (Hz) / Limite inferior (dB)** | Redesenham o espectrograma imediatamente, em eixo de frequência mel, linear ou logarítmico. O reprodutor de áudio não é afetado, de modo que a reprodução continua enquanto a visualização é alterada. |
+| **✎** | Edita a lista de rótulos: cada botão exibe um **×** que o remove, e o campo abaixo adiciona um novo rótulo. As alterações são salvas no arquivo da lista de rótulos (por padrão, `labels.txt`, na pasta de segmentos). |
+| **⟳** | Reexamina a pasta, por exemplo após a inclusão de novos segmentos. |
 | **Idioma** | Alterna a interface entre Português e Inglês. |
-| **◐ / ☀ / ☾** | Tema: segue o sistema, claro ou escuro — clique para alternar. O tema escolhido fica guardado neste navegador. O espectrograma mantém suas cores nos dois. |
+| **◐ / ☀ / ☾** | Tema: padrão do sistema, claro ou escuro; cada clique seleciona o seguinte. O tema selecionado é armazenado no navegador. O espectrograma mantém suas cores nos dois temas. |
 
-A previsão é a pergunta, e Correto ou Incorreto é a resposta; os botões de rótulo só
-acrescentam o que mais houver. Nada vem marcado, então um segmento rejeitado sem
-pensar duas vezes é salvo como "nenhum rótulo da lista" — nunca com um rótulo que sobrou
-do clipe anterior. Sem previsão para julgar, um único botão **✔ Salvar** grava os
-rótulos marcados. O servidor calcula o resultado de novo a partir dos rótulos
-recebidos — uma regra, num lugar só:
+A previsão é a pergunta, e Correto ou Incorreto é a resposta; os botões de rótulo
+apenas acrescentam o que mais houver no clipe. Nenhum rótulo vem selecionado de
+antemão, de modo que um segmento rejeitado sem outra seleção é salvo como sem
+nenhum rótulo da lista, e nunca com um rótulo herdado do clipe anterior. Quando o
+segmento não tem previsão a avaliar, um único botão **✔ Salvar** grava os rótulos
+selecionados. O servidor determina o resultado a partir dos rótulos recebidos,
+segundo uma única regra:
 
 | Rótulos salvos | Resultado |
 | --- | --- |
 | a previsão | correto |
-| a previsão e outros | correto (os outros são registrados como *added*) |
-| só outros rótulos | incorreto, e o clipe é na verdade esses |
-| nenhum | incorreto, e o clipe não tem nada da lista |
+| a previsão e outros rótulos | correto (os demais rótulos são registrados como *added*) |
+| apenas outros rótulos | incorreto; o clipe contém esses rótulos |
+| nenhum | incorreto; o clipe não contém nenhum rótulo da lista |
 | qualquer um, com Incerto | incerto |
 
-Após a revisão, o clipe sai da lista e o próximo aparece automaticamente.
+Após a revisão, o clipe é retirado da lista e o próximo é exibido
+automaticamente.
 
-Um segmento pode receber vários rótulos — duas espécies cantando ao mesmo tempo —
-o que é o padrão; `--no-multi-label` limita cada segmento a um rótulo. Você pode ajustar os rótulos disponíveis quando for necessário.
+Um segmento pode receber vários rótulos, por exemplo quando duas espécies
+vocalizam ao mesmo tempo. Esse é o comportamento padrão; `--no-multi-label`
+limita cada segmento a um único rótulo.
 
-Teclado: <kbd>←</kbd> <kbd>→</kbd> para navegar, <kbd>T</kbd> / <kbd>F</kbd> /
-<kbd>U</kbd> para correto / incorreto / incerto, <kbd>1</kbd>…<kbd>9</kbd> para
-marcar os nove primeiros rótulos, <kbd>Espaço</kbd> para tocar ou pausar.
+Atalhos de teclado: <kbd>←</kbd> e <kbd>→</kbd> navegam entre os segmentos;
+<kbd>T</kbd>, <kbd>F</kbd> e <kbd>U</kbd> registram correto, incorreto e incerto;
+<kbd>1</kbd>…<kbd>9</kbd> marcam ou desmarcam os nove primeiros rótulos;
+<kbd>Espaço</kbd> reproduz ou pausa o áudio.
 
 ### A lista de rótulos
 
-Os rótulos disponíveis vêm de uma lista salva em **`labels.txt`**, na pasta de segmentos, um
-rótulo por linha. Na primeira vez que um conjunto é aberto, a lista é criada com
-os rótulos que o conjunto já usa, e o arquivo é gravado junto com o primeiro
-segmento revisado; a partir
-daí a referência principal é este arquivo, e você o edita pela interface (ou à mão — linhas em branco e comentários com `#` são ignorados).
+Os botões de rótulo provêm de uma lista armazenada em **`labels.txt`**, na pasta
+de segmentos, com um rótulo por linha. Na primeira vez que um conjunto é aberto,
+a lista é formada pelos rótulos que o conjunto já utiliza, e o arquivo é gravado
+quando o primeiro segmento é revisado. A partir de então, o arquivo constitui a
+lista, que pode ser editada pela interface ou manualmente (linhas em branco e
+linhas iniciadas por `#` são ignoradas).
 
-Iniciar com `--labels` define outra coisa: só aqueles rótulos são oferecidos na
-sessão, no lugar do que estiver no arquivo, e é essa lista que passa a ser gravada.
+Quando `--labels` é informado, apenas esses rótulos são oferecidos na sessão.
+Eles substituem o conteúdo do arquivo e são gravados em seu lugar.
 
-Nada é acrescentado automaticamente: uma releitura que encontre uma pasta nova
-não adiciona o nome dela para a lista. Reduzir a lista também é seguro — o rótulo
-do próprio clipe sempre aparece como botão, esteja ou não na lista, e digitar um
-nome na caixa o adiciona à lista e o marca no segmento em visualização de uma vez.
+A lista nunca é ampliada automaticamente: um novo exame da pasta que encontre uma
+pasta nova não acrescenta o seu nome à lista. A remoção de rótulos da lista
+também é segura, uma vez que o rótulo do próprio clipe sempre aparece como botão,
+conste ou não da lista, e um nome digitado no campo é acrescentado à lista e
+selecionado para o segmento em exibição.
 
-Use `--labels-file` para guardar a lista em outro lugar, ou `--no-labels-file`
-para que as edições valham só naquela sessão.
+`--labels-file` armazena a lista em outro local, e `--no-labels-file` mantém as
+alterações apenas durante a sessão atual.
 
-### Onde o clipe é salvo após revisão?
+### Onde o clipe revisado é arquivado
 
-Um clipe revisado é arquivado sob o seu **resultado** e depois o caminho que
-tinha — incluindo a pasta da **previsão**. Cada pasta responde a uma pergunta só:
-`incorrect/PONTO_A/BOAALB/` guarda exatamente os clipes que o modelo chamou de BOAALB
-e errou, então contar uma pasta dá a precisão daquela classe. Os rótulos que você
-acrescentou vão para o fim do nome do arquivo, então a árvore se lê sem abrir o
-registro:
+Um clipe revisado é arquivado sob o seu **resultado**, seguido do caminho que
+tinha, incluindo a pasta do rótulo **previsto**. Cada pasta responde, portanto, a
+uma única pergunta: `incorrect/PONTO_A/BOAALB/` contém exatamente os clipes que o
+modelo rotulou incorretamente como BOAALB, de modo que o número de arquivos em
+cada pasta fornece a precisão daquela classe. Os rótulos acrescentados durante a
+revisão são incluídos no fim do nome do arquivo, o que permite ler a árvore de
+pastas sem consultar o registro:
 
 ```
 PONTO_A/BOAALB/clipe.wav
@@ -233,99 +251,105 @@ PONTO_A/BOAALB/clipe.wav
    ├── ✔ Correto, + PHYLUT         →  correct/PONTO_A/BOAALB/clipe_PHYLUT.wav
    ├── ✘ Incorreto, TURDRU         →  incorrect/PONTO_A/BOAALB/clipe_TURDRU.wav
    ├── ✘ Incorreto, TURDRU+PHYLUT  →  incorrect/PONTO_A/BOAALB/clipe_TURDRU_PHYLUT.wav
-   ├── ✘ Incorreto, nada           →  incorrect/PONTO_A/BOAALB/clipe.wav
+   ├── ✘ Incorreto, nenhum         →  incorrect/PONTO_A/BOAALB/clipe.wav
    └── ? Incerto                   →  uncertain/PONTO_A/BOAALB/clipe.wav
 ```
 
-- O nome do arquivo **ganha cada rótulo acrescentado além da previsão**, na ordem
-  em que foram marcados, com espaços escritos como `_` (`chuva forte` →
-  `_chuva_forte`). O nome original fica inteiro na frente deles. Sem nada
-  acrescentado — um Correto simples, ou um Incorreto sem nenhum rótulo da lista — e para o que
-  for marcado como Incerto, o nome fica exatamente como foi encontrado.
+- O nome do arquivo **recebe cada rótulo acrescentado além da previsão**, na
+  ordem em que foram selecionados, com espaços escritos como `_` (`chuva forte`
+  passa a `_chuva_forte`). O nome original é mantido integralmente antes deles.
+  Quando nenhum rótulo é acrescentado (um Correto simples, ou um Incorreto sem
+  nenhum rótulo da lista), e para todo segmento marcado como Incerto, o nome
+  permanece inalterado.
 - Com `--label-depth`, as pastas *abaixo* do rótulo **não** são recriadas:
-  `BOAALB/PONTO_A/20240115/clipe.wav` corrigido para TURDRU vira
-  `incorrect/BOAALB/clipe_TURDRU.wav` — uma pasta por rótulo previsto, com os clipes
-  dentro.
-- Um clipe que chegou **sem rótulo** não tem previsão para acertar ou errar: é
-  arquivado em `labelled/`, mantendo as pastas em que estava, e todos os rótulos
-  dados vão para o nome.
+  `BOAALB/PONTO_A/20240115/clipe.wav` corrigido para TURDRU passa a
+  `incorrect/BOAALB/clipe_TURDRU.wav`, com uma pasta por rótulo previsto contendo
+  diretamente os clipes.
+- Um clipe que chegou **sem rótulo** não tem previsão a avaliar. Ele é arquivado
+  em `labelled/`, mantendo as pastas em que estava, e todos os rótulos atribuídos
+  são acrescentados ao seu nome.
 - Os nomes das pastas são os mesmos em qualquer idioma da interface.
-- Se o nome colidir, ganha um sufixo `_2`, `_3`, … — um arquivo já revisado nunca
-  é sobrescrito.
-- A pasta de onde o clipe saiu é **removida quando o último clipe dela sai**,
-  junto com as pastas acima que ficarem vazias, então a árvore de pendentes
-  encolhe conforme a revisão avança. Uma pasta que ainda tenha qualquer coisa —
-  um clipe pendente, um arquivo solto — é preservada, e a pasta de segmentos em
-  si nunca é removida.
-- Clipes que já estão em `correct/`, `incorrect/`, `uncertain/` ou `labelled/` ficam
-  fora da lista de pendentes, então a revisão pode ser dividida em várias sessões.
+- Um nome já existente recebe o sufixo `_2`, `_3`, …; um arquivo revisado nunca é
+  sobrescrito.
+- A pasta de onde o clipe foi retirado é **removida quando o seu último clipe é
+  arquivado**, juntamente com as pastas superiores que fiquem vazias, de modo que
+  a árvore de segmentos pendentes diminui à medida que a revisão avança. Uma pasta
+  que ainda contenha qualquer item, seja um clipe pendente ou outro arquivo, é
+  preservada, e a pasta de segmentos em si nunca é removida.
+- Clipes que já se encontram em `correct/`, `incorrect/`, `uncertain/` ou
+  `labelled/` são excluídos da lista de pendentes, de modo que a revisão pode ser
+  distribuída em várias sessões.
 
-**Gravar em outro lugar.** `--output` (ou `-o`) cria as pastas de veredito e o
-registro da revisão na pasta que você escolher, em vez de dentro da pasta de
-segmentos, deixando intacto o conjunto que está sendo revisado:
+**Gravação em outro local.** `--output` (ou `-o`) cria as pastas de veredito e o
+registro da revisão numa pasta escolhida pelo revisor, em vez da pasta de
+segmentos, mantendo inalterado o conjunto em revisão:
 
 ```bash
 segment-reviewer /dados/segmentos --output /dados/revisados
 ```
 
-Um caminho relativo é lido a partir da pasta de segmentos (`-o revisados` →
-`/dados/segmentos/revisados/`), um absoluto é usado como está, e por SSH é um
-caminho na máquina remota. A tabela de anotações também vai para lá, a menos que
-`--annotations-path` diga outra coisa. Use o mesmo `--output` para retomar uma
-revisão: é ali que as contagens de "já corretos/incorretos" são feitas, e os
-clipes já gravados lá nunca voltam para a lista de pendentes.
+Um caminho relativo é resolvido a partir da pasta de segmentos (`-o revisados`
+corresponde a `/dados/segmentos/revisados/`), um caminho absoluto é utilizado tal
+como informado, e, via SSH, o caminho refere-se à máquina remota. A tabela de
+anotações é gravada na mesma pasta, salvo indicação diferente em
+`--annotations-path`. Para retomar uma revisão, deve-se informar novamente o
+mesmo `--output`: é nessa pasta que são feitas as contagens de segmentos já
+revisados, e os clipes já gravados nela nunca retornam à lista de pendentes.
 
 ### O registro da revisão
 
 Cada revisão acrescenta uma linha a **`reviews.csv`**, ao lado das pastas de
-veredito. Ele é sempre gravado, e é o registro da revisão:
+veredito. O registro é sempre gravado e constitui o histórico da revisão:
 
-| Coluna | Contém |
+| Coluna | Conteúdo |
 | --- | --- |
-| `reviewed_at` | Quando, com o fuso horário |
-| `source`, `destination` | Onde o clipe estava, relativo à pasta de segmentos, e para onde foi, relativo à pasta de saída |
-| `predicted`, `score` | O rótulo com que o clipe chegou, e o escore que o nome trazia |
+| `reviewed_at` | Data e hora da revisão, com o fuso horário |
+| `source`, `destination` | O local original do clipe, relativo à pasta de segmentos, e o novo local, relativo à pasta de saída |
+| `predicted`, `score` | O rótulo com que o clipe chegou e o escore indicado no seu nome |
 | `outcome` | `correct`, `incorrect`, `uncertain` ou `labelled` |
-| `labels` | O que o revisor diz que o clipe contém, separado por `;`; vazio quando não há nada da lista |
-| `added` | Esses rótulos fora a previsão: a correção, ou uma segunda espécie |
-| `site`, `recording`, `start_time`, `end_time` | Como na tabela de anotações abaixo |
+| `labels` | Os rótulos identificados pelo revisor no clipe, separados por `;`; vazio quando o clipe não contém nenhum rótulo da lista |
+| `added` | Os rótulos além da previsão: a correção ou uma espécie adicional |
+| `site`, `recording`, `start_time`, `end_time` | Como na tabela de anotações descrita abaixo |
 
-A precisão por classe é `correct / (correct + incorrect)` agrupado por `predicted`, e
-`predicted` contra `labels` nas linhas erradas é a confusão entre classes. Se o
-registro não puder ser gravado, o clipe volta para o lugar e a revisão é recusada
-— um clipe nunca é arquivado sem a sua linha.
+A precisão de cada classe é `correct / (correct + incorrect)`, agrupada por
+`predicted`; a comparação entre `predicted` e `labels` nas linhas incorretas
+fornece a confusão entre classes. Se o registro não puder ser gravado, o clipe é
+devolvido ao local original e a revisão é recusada, de modo que um clipe nunca é
+arquivado sem a linha correspondente.
 
 ### A tabela de anotações
 
 Com `--annotations`, cada rótulo que um segmento **comprovadamente contém** é
-acrescentado a um CSV com as colunas `site, file, label, start_time, end_time` —
-uma linha por rótulo, então um segmento com duas espécies dá duas linhas. Uma
-previsão rejeitada nunca aparece nele, nem clipes marcados como incertos ou sem
-nada da lista. Os tempos são a posição do clipe dentro da gravação de onde ele foi
-cortado, lidos do nome e ampliados até a duração real do clipe (então o padding
-entra na conta).
+acrescentado a um arquivo CSV com as colunas `site, file, label, start_time,
+end_time`, com uma linha por rótulo; assim, um segmento com duas espécies gera
+duas linhas. Uma previsão rejeitada nunca consta da tabela, tampouco segmentos
+marcados como incertos ou sem nenhum rótulo da lista. Os tempos indicam a posição
+do clipe na gravação da qual foi recortado; são lidos do seu nome e ampliados até
+a duração real do clipe, de modo que eventual margem (padding) seja incluída.
 
-`file` nomeia essa gravação de origem. O nome de um clipe raramente diz de qual
-gravação ele veio, então isso é procurado num `segment_sources.csv` opcional
-(`segment,recording`) ao lado dos segmentos; sem ele a coluna fica vazia e a
-interface avisa embaixo dos botões.
+`file` identifica essa gravação de origem. Como o nome de um clipe raramente
+identifica a gravação da qual foi recortado, a gravação é procurada num arquivo
+opcional `segment_sources.csv` (`segment,recording`), na pasta de segmentos. Na
+ausência desse arquivo, a coluna permanece vazia e a interface informa o fato
+abaixo dos botões.
 
-As linhas são gravadas conforme cada segmento é revisado, e uma tabela existente é
-complementada, então revisões em várias sessões se somam.
+As linhas são gravadas à medida que cada segmento é revisado, e uma tabela
+existente é complementada, de modo que revisões distribuídas em várias sessões se
+acumulam na mesma tabela.
 
 ---
 
-## Outras convenções de nome
+## Outras convenções de nomenclatura
 
-Nomes que não casam continuam perfeitamente revisáveis — a interface só mostra
-menos sobre eles, e não mostra nada de que não tenha certeza. Para recuperar o
-ponto, o horário, a janela e o escore, diga ao `--filename-pattern` como o nome é
-construído.
+Nomes que não correspondem ao padrão podem ainda assim ser revisados; a interface
+exibe menos informações sobre eles, e nenhuma que não possa ler com segurança.
+Para que o ponto, o horário, a janela e o escore sejam exibidos,
+`--filename-pattern` deve descrever como os nomes são formados.
 
-### Escrevendo um modelo
+### Elaboração de um modelo
 
-A forma fácil: **escreva o nome, com as partes nomeadas entre colchetes.** Tudo
-fora dos colchetes é comparado literalmente.
+A forma mais simples consiste em **escrever o nome, com as partes identificadas
+entre colchetes**. Todo o texto fora dos colchetes é comparado literalmente.
 
 ```bash
 # PONTO_A_20240115T053000_REC_12.0_17.0_BOAALB_0.873.wav
@@ -334,47 +358,49 @@ segment-reviewer ~/segmentos \
 ```
 
 | No modelo | Corresponde a |
-|---|---|
-| `[site]`, `[label]` | texto livre — pode conter underscores |
-| `YYYYMMDD`, `HHMMSS` | a data e a hora, escritas soltas ou como `[date]`/`[time]` |
-| `[datetime]` | as duas de uma vez, em qualquer formato — use com `--datetime-format` |
+| --- | --- |
+| `[site]`, `[label]` | texto livre, que pode conter sublinhados |
+| `YYYYMMDD`, `HHMMSS` | a data e a hora, escritas como indicado ou como `[date]` e `[time]` |
+| `[datetime]` | a data e a hora em conjunto, em qualquer formato, a ser usado com `--datetime-format` |
 | `[start_time]`, `[end_time]` | a janela do clipe na gravação, em segundos |
-| `[score]` | um número de similaridade ou confiança |
-| `[extra]` | o que sobrar, mostrado na interface como *extra* |
-| `*` | qualquer coisa, sem capturar |
-| qualquer outra coisa | ela mesma, literalmente |
+| `[score]` | um valor de similaridade ou de confiança |
+| `[extra]` | qualquer texto restante, exibido na interface como *Outros* |
+| `*` | qualquer texto, que não é capturado |
+| qualquer outro texto | ele próprio, literalmente |
 
-Todo campo é opcional, mas o modelo precisa casar com o nome **inteiro** — casar
-pela metade encheria a interface com dados lidos dos pedaços errados, então isso
-conta como não casar. Um erro de digitação como `[speceis]` é recusado na
-inicialização, em vez de ignorado em silêncio.
+Todos os campos são opcionais, mas o modelo deve corresponder ao nome **inteiro**.
+Uma correspondência parcial preencheria a interface com informações lidas das
+partes erradas do nome e, por isso, é tratada como ausência de correspondência.
+Um campo desconhecido, como o erro de digitação `[speceis]`, é recusado na
+inicialização, em vez de ser ignorado.
 
-### Escrevendo uma expressão
+### Elaboração de uma expressão regular
 
-Para formatos que nenhum modelo descreve, `--filename-pattern` continua aceitando
-**qualquer expressão regular com grupos nomeados** — `site`, `date`, `time`,
-`datetime`, `start`, `end`, `label`, `score`, `extra`, todos opcionais, aplicados
-ao nome do arquivo sem a extensão:
+Para nomes que nenhum modelo consegue descrever, `--filename-pattern` também
+aceita **qualquer expressão regular com grupos nomeados**: `site`, `date`, `time`,
+`datetime`, `start`, `end`, `label`, `score` e `extra`. Todos são opcionais, e a
+expressão é aplicada ao nome do arquivo sem a extensão:
 
 ```bash
-# rótulo primeiro, depois o ponto, depois um timestamp de 12 dígitos:
+# rótulo primeiro, depois o ponto, depois um carimbo de data e hora de 12 dígitos:
 # BOAALB-pontoA-202401150530.wav
 segment-reviewer ~/segmentos \
     --filename-pattern '^(?P<label>[A-Z]+)-(?P<site>\w+)-(?P<datetime>\d{12})$' \
     --datetime-format '%Y%m%d%H%M'
 ```
 
-### De onde vem o rótulo
+### Origem do rótulo
 
-`--label-from` escolhe: `folder` (o padrão), `filename` (o grupo `label` do
-padrão) ou `none`. Um padrão que captura um grupo `label` muda sozinho para
-`filename`, a menos que você diga o contrário — e nesse modo o clipe é arquivado
-direto sob o resultado e o rótulo previsto: `incorrect/BOAALB/clipe_TURDRU.wav`.
+`--label-from` define a origem: `folder` (o padrão), `filename` (o grupo `label`
+do padrão) ou `none`. Um padrão que captura um grupo `label` seleciona
+`filename` automaticamente, salvo indicação diferente em `--label-from`. Nesse
+modo, o clipe é arquivado diretamente sob o resultado e o rótulo previsto, por
+exemplo `incorrect/BOAALB/clipe_TURDRU.wav`.
 
-Para manter as pastas, diga isso. Com segmentos organizados como
-`[rótulo]/[ponto]_AAAAMMDD/clipe.wav`, o comando abaixo lê o rótulo da pasta de
-cima, mantém a pasta do ponto embaixo dele, e ainda tira ponto, horários e escore
-do nome do arquivo:
+Para manter as pastas, a origem `folder` deve ser solicitada explicitamente. Para
+segmentos organizados como `[rótulo]/[ponto]_AAAAMMDD/clipe.wav`, o comando
+abaixo lê o rótulo da pasta superior, mantém a pasta do ponto abaixo dela e
+continua a ler o ponto, os horários e o escore do nome do arquivo:
 
 ```bash
 segment-reviewer ~/segmentos \
@@ -384,75 +410,80 @@ segment-reviewer ~/segmentos \
 
 ### A predefinição vector-search
 
-`--filename-pattern vector-search` lê
-`PONTO_AAAAMMDD_HHMMSS_INÍCIO-FIMs_ESCORE_RÓTULO.wav`, os nomes gravados pelos
-notebooks de busca vetorial bioacústica, com o **rótulo e o escore de
-similaridade no nome**:
+`--filename-pattern vector-search` lê nomes no formato
+`PONTO_AAAAMMDD_HHMMSS_INÍCIO-FIMs_ESCORE_RÓTULO.wav`, gravados pelos notebooks
+de busca vetorial bioacústica, com o **rótulo e o escore de similaridade no
+nome**:
 
 ```bash
 segment-reviewer ~/vector_search_segments --filename-pattern vector-search --annotations
 ```
 
-Como ali o rótulo mora no nome, os clipes são arquivados direto sob o resultado
-e o rótulo previsto — `correct/BOAALB/`, `incorrect/BOAALB/` — e os rótulos
-acrescentados vão para o fim do nome como em qualquer outro caso: um segmento
-chamado `..._0.873_BOAALB.wav` e corrigido para TURDRU vira
-`incorrect/BOAALB/..._0.873_BOAALB_TURDRU.wav`. O escore aparece ao lado do rótulo na
-interface, e também no registro.
+Como o rótulo faz parte do nome, os clipes são arquivados diretamente sob o
+resultado e o rótulo previsto (`correct/BOAALB/`, `incorrect/BOAALB/`), e os
+rótulos acrescentados são incluídos no fim do nome, como nos demais casos: um
+segmento chamado `..._0.873_BOAALB.wav` e corrigido para TURDRU passa a
+`incorrect/BOAALB/..._0.873_BOAALB_TURDRU.wav`. O escore é exibido ao lado do
+rótulo na interface e também consta do registro.
 
 ---
 
-## Revisar segmentos por SSH
+## Revisão de segmentos via SSH
 
-Aponte a ferramenta para uma pasta remota e tudo acontece por SFTP — listar, ler
-os clipes, movê-los para as pastas de veredito, gravar a tabela de anotações. Os
-clipes são cacheados localmente conforme são abertos, então voltar é instantâneo.
+Quando uma pasta remota é indicada, todas as operações são realizadas via SFTP: a
+listagem da pasta, a leitura dos clipes, a movimentação para as pastas de
+veredito e a gravação do registro e da tabela de anotações. Os clipes são
+armazenados localmente em cache à medida que são abertos, de modo que o retorno a
+um clipe anterior dispensa novo download.
 
 ```bash
 segment-reviewer ssh://usuario@servidor:22/dados/segmentos
-segment-reviewer servidor:/dados/segmentos           # estilo scp
+segment-reviewer servidor:/dados/segmentos           # endereço no estilo scp
 segment-reviewer ssh://servidor/dados/segmentos --ssh-key ~/.ssh/id_campo
 ```
 
-Apelidos de host, usuários, portas e chaves do `~/.ssh/config` são respeitados, e
-um agente SSH em execução é usado. Uma chave de host desconhecida é recusada, a
-menos que você passe `--accept-new-host-key`.
+Apelidos de host, usuários, portas e arquivos de identidade definidos em
+`~/.ssh/config` são aplicados, e um agente SSH em execução é utilizado. Uma chave
+de host desconhecida é recusada, salvo se `--accept-new-host-key` for informado.
 
-Nada é gravado fora da pasta de segmentos e nenhum clipe é apagado — os arquivos
-apenas se movem entre subpastas da pasta que você indicou.
+Nada é gravado fora da pasta de segmentos e da pasta de saída, e nenhum clipe é
+apagado: os arquivos são apenas movidos dentro dessas pastas.
 
 ---
 
-## Rodando num servidor
+## Execução num servidor
 
-A interface é uma página web comum, então a ferramenta pode rodar onde o áudio
-está e ser usada de qualquer lugar:
+A interface é uma página web comum; assim, a ferramenta pode ser executada na
+máquina que armazena o áudio e utilizada a partir de qualquer outra:
 
 ```bash
 segment-reviewer /dados/segmentos --host 0.0.0.0 --port 8765 --no-open
 ```
 
-Ao ligar num endereço que não seja o loopback, um **token de acesso** é gerado e
-embutido na URL impressa; abra essa URL uma vez e o token fica num cookie. Use
-`--token meusegredo` para escolher o token, ou `--no-auth` para servir sem ele.
+Quando um endereço diferente do loopback é utilizado, um **token de acesso** é
+gerado e incluído no endereço exibido; após a abertura desse endereço, o token é
+armazenado num cookie. `--token meusegredo` define o token explicitamente, e
+`--no-auth` disponibiliza a interface sem token.
 
-O token afasta um curioso das suas pastas; ele não é TLS. Quem o tiver pode abrir
-— e revisar, o que move clipes — qualquer pasta que o revisor consiga ler, e ver
-os nomes das pastas daquela máquina; trate-o como uma senha e pense duas vezes
-antes de usar `--no-auth` numa rede compartilhada. Numa rede não confiável,
-prefira Tailscale (ligar no endereço do Tailscale, ou em `0.0.0.0` com a máquina
-acessível só pela tailnet) ou um túnel SSH:
+O token impede o acesso casual, mas não oferece criptografia (TLS). Quem o
+possuir pode abrir e revisar (e, portanto, mover clipes de) qualquer pasta que o
+revisor consiga ler, além de listar os nomes das pastas daquela máquina. O token
+deve, portanto, ser tratado como uma senha, e o uso de `--no-auth` deve ser
+evitado em redes compartilhadas. Em redes não confiáveis, recomenda-se o
+Tailscale (vinculando ao endereço do Tailscale, ou a `0.0.0.0` numa máquina
+acessível apenas pela tailnet) ou um túnel SSH:
 
 ```bash
 # no servidor
 segment-reviewer /dados/segmentos --port 8765 --no-open
-# no seu notebook
-ssh -N -L 8765:127.0.0.1:8765 usuario@servidor   # depois abra http://127.0.0.1:8765
+# no computador local
+ssh -N -L 8765:127.0.0.1:8765 usuario@servidor   # em seguida, abrir http://127.0.0.1:8765
 ```
 
-Um revisor por vez: a lista de pendentes, a posição atual e a pasta aberta ficam
-no servidor, então dois navegadores na mesma instância conduzem a mesma sessão —
-abrir uma pasta em um abre nos dois.
+A ferramenta atende a um revisor por vez. A lista de pendentes, a posição atual e
+a pasta aberta são mantidas pelo servidor; assim, dois navegadores conectados à
+mesma instância controlam a mesma sessão, e uma pasta aberta num deles é aberta
+em ambos.
 
 ---
 
@@ -461,60 +492,68 @@ abrir uma pasta em um abre nos dois.
 ```
 segment-reviewer [SEGMENTOS] [OPÇÕES]
 
-  SEGMENTOS                     Pasta a abrir no início: caminho local, ou
-                                ssh://[usuário@]host[:porta]/caminho. Opcional —
-                                a pasta pode ser aberta, e trocada, no navegador
+  SEGMENTOS                     Pasta a abrir na inicialização: caminho local, ou
+                                ssh://[usuário@]host[:porta]/caminho. Opcional; a
+                                pasta pode ser aberta, e trocada, no navegador
 
   -l, --lang TEXT               Idioma inicial da interface: en, pt-BR  [padrão: en]
-      --labels TEXT             Os únicos rótulos oferecidos, separados por vírgulas.
-                                Substitui uma lista já gravada
-      --labels-file TEXT        Onde a lista fica, um rótulo por linha
+      --labels TEXT             Os únicos rótulos oferecidos, separados por
+                                vírgulas. Substitui uma lista já gravada
+      --labels-file TEXT        Local da lista de rótulos, um rótulo por linha
                                 [padrão: <SEGMENTOS>/labels.txt]
-      --no-labels-file          Não lê nem grava a lista; as edições valem só na sessão
-      --label-from TEXT         De onde vem o rótulo: folder, filename ou none
+      --no-labels-file          Não lê nem grava a lista; as alterações valem apenas
+                                na sessão
+      --label-from TEXT         Origem do rótulo: folder, filename ou none
                                 [padrão: folder]
-      --label-depth INTEGER     Qual pasta carrega o rótulo, contando a partir de
-                                SEGMENTOS: 1 para RÓTULO/PONTO/clipe.wav. 0 é a pasta
-                                em que o clipe está  [padrão: 0]
+      --label-depth INTEGER     Nível da pasta que carrega o rótulo, contado a
+                                partir de SEGMENTOS: 1 para RÓTULO/PONTO/clipe.wav;
+                                0 é a pasta que contém o clipe  [padrão: 0]
       --filename-pattern TEXT   'default', 'vector-search', um modelo como
-                                '[site]_YYYYMMDD_HHMMSS_[label]_[score]', ou uma regex
-                                com os grupos nomeados site, date, time, datetime,
-                                start, end, label, score, extra  [padrão: default]
+                                '[site]_YYYYMMDD_HHMMSS_[label]_[score]', ou uma
+                                expressão regular com os grupos nomeados site,
+                                date, time, datetime, start, end, label, score,
+                                extra  [padrão: default]
       --datetime-format TEXT    Formato strptime da data e hora capturadas
                                 [padrão: %Y%m%d%H%M%S]
-      --no-multi-label          Limita cada segmento a um rótulo (vários rótulos por
-                                segmento é o padrão)
+      --no-multi-label          Limita cada segmento a um rótulo (por padrão, um
+                                segmento pode receber vários rótulos)
       --annotations             Grava também a tabela de rótulos confirmados
-      --annotations-path TEXT   Onde ela fica  [padrão: <SEGMENTOS>/annotations.csv]
+      --annotations-path TEXT   Local da tabela  [padrão: <saída>/annotations.csv]
 
-      --spec-type [mel|fft|log] Eixo de frequência inicial: escala mel, Hz linear ou
-                                Hz logarítmico  [padrão: mel]
-      --fmin INTEGER            Frequência mínima inicial, Hz  [padrão: 0]
-      --fmax INTEGER            Frequência máxima inicial, Hz; 0 = Nyquist  [padrão: 0]
-      --db-floor INTEGER        Valor mínimo em dB inicial  [padrão: -80]
+      --spec-type [mel|fft|log] Eixo de frequência inicial: escala mel, Hz linear
+                                ou Hz logarítmico  [padrão: mel]
+      --fmin INTEGER            Frequência mínima inicial, em Hz  [padrão: 0]
+      --fmax INTEGER            Frequência máxima inicial, em Hz; 0 = Nyquist
+                                [padrão: 0]
+      --db-floor INTEGER        Limite inferior inicial da escala de cores, em dB
+                                [padrão: -80]
 
-  -o, --output TEXT             Pasta onde os segmentos revisados e o reviews.csv
-                                são gravados  [padrão: a própria pasta de segmentos]
+  -o, --output TEXT             Pasta em que os segmentos revisados e o
+                                reviews.csv são gravados
+                                [padrão: a própria pasta de segmentos]
 
-      --host TEXT               Endereço para servir  [padrão: 127.0.0.1]
+      --host TEXT               Endereço de vinculação  [padrão: 127.0.0.1]
   -p, --port INTEGER            Porta  [padrão: 8765]
       --token TEXT              Token de acesso da interface
-      --no-auth                 Serve sem token de acesso
-      --open / --no-open        Abre o navegador ao iniciar  [padrão: abre]
+      --no-auth                 Disponibiliza a interface sem token de acesso
+      --open / --no-open        Abre o navegador na inicialização  [padrão: abre]
 
       --ssh-user / --ssh-port / --ssh-key / --ssh-password
-      --known-hosts TEXT        known_hosts adicional a confiar
+      --known-hosts TEXT        Arquivo known_hosts adicional a ser considerado
+                                confiável
       --accept-new-host-key     Aceita uma chave de host SSH desconhecida
-      --cache-dir TEXT          Onde os clipes remotos são cacheados  [padrão: pasta temporária]
+      --cache-dir TEXT          Local do cache dos clipes remotos
+                                [padrão: uma pasta temporária]
 
-      --version                 Mostra a versão e sai
+      --version                 Exibe a versão e encerra
 ```
 
 ### Pastas de veredito e idioma
 
-As pastas de veredito são sempre `correct/`, `incorrect/`, `uncertain/` e `labelled/`, e o
-registro da revisão sempre grava esses nomes de resultado, qualquer que seja o
-idioma da interface — os dados de uma revisão nunca dependem de quem revisou.
+As pastas de veredito são sempre `correct/`, `incorrect/`, `uncertain/` e
+`labelled/`, e o registro da revisão sempre grava esses nomes de resultado,
+qualquer que seja o idioma da interface. Os dados gravados por uma revisão,
+portanto, nunca dependem do idioma em que ela foi realizada.
 
 ---
 
@@ -525,20 +564,23 @@ uv venv && uv pip install -e ".[dev]"
 uv run pytest
 ```
 
-A suíte cobre as regras de nome, os layouts de veredito, a API HTTP e uma revisão
-completa conduzida por um servidor SFTP em processo. Os helpers sem DOM do cliente
-rodam no node, e se pulam sozinhos quando o node não está instalado.
+A suíte de testes abrange as regras de nome, o arquivamento dos clipes revisados,
+a API HTTP, os textos da interface nos dois idiomas e uma revisão completa
+conduzida por um servidor SFTP em processo. As funções auxiliares do cliente que
+independem do DOM são testadas com Node.js, e esses testes são ignorados quando o
+Node.js não está instalado.
 
-Antes de dar push, vale uma rodada como a CI enxerga:
+Antes de enviar as alterações (push), recomenda-se executar também a suíte tal
+como a integração contínua a executa:
 
 ```bash
 GITHUB_ACTIONS=true uv run pytest
 ```
 
-O rich colore a ajuda do Typer sempre que acha que está num terminal, e no GitHub
-Actions ele sempre acha — o que muda a saída renderizada o bastante para quebrar
-um teste que passa localmente.
+O Rich colore a saída de ajuda do Typer sempre que detecta um terminal, o que
+ocorre invariavelmente no GitHub Actions. Isso altera a saída renderizada o
+suficiente para quebrar um teste que passa localmente.
 
 ## Licença
 
-MIT — veja [LICENSE](LICENSE).
+MIT; consulte [LICENSE](LICENSE).

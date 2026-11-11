@@ -169,7 +169,7 @@ def review(
     ),
     labels: str = typer.Option(
         "", "--labels",
-        help="The only labels offered in the drop-downs, comma-separated "
+        help="The only labels offered as buttons, comma-separated "
              "(e.g. 'BOAALB, PHYLUT, rain'); a stored list is replaced by them. "
              "Left blank, the stored list is used, or the labels the pending "
              "segments already carry when there is none yet.",
