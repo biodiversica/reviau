@@ -1,4 +1,4 @@
-# reviau
+# (| reviau |)
 
 [Português (Brasil) →](README.pt-BR.md)
 
