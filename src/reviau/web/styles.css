@@ -27,6 +27,10 @@
   --backdrop:   light-dark(rgba(0, 0, 0, .45), rgba(0, 0, 0, .6));
   --radius: 10px;
   --foot-height: 28px;
+  /* One typeface for the whole interface; the system's own monospace, so
+     nothing is downloaded and the tool works offline. */
+  --font: ui-monospace, SFMono-Regular, Menlo, Consolas, "DejaVu Sans Mono",
+          "Liberation Mono", monospace;
 }
 
 :root[data-theme="light"] { color-scheme: light; }
@@ -38,8 +42,11 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: 14px/1.45 var(--font);
 }
+
+/* Controls and code take the browser's own fonts unless told otherwise. */
+button, input, select, textarea, code, kbd, pre, samp { font-family: var(--font); }
 
 /* ── top bar ─────────────────────────────────────────────────────────────── */
 .bar {
@@ -56,7 +63,6 @@ body {
   flex-wrap: wrap;
 }
 .bar-left, .bar-right { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.logo { font-size: 18px; }
 .app-title { font-weight: 650; white-space: nowrap; }
 /* ── the folder under review ─────────────────────────────────────────────── */
 .folder-bar {
@@ -74,7 +80,7 @@ body {
   border-radius: 8px;
   background: var(--bg);
   color: var(--ink);
-  font: 13px ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 13px var(--font);
 }
 .folder-input:focus { outline: none; border-color: var(--accent); }
 .folder-bar.empty .folder-input { border-color: var(--accent); }
@@ -103,7 +109,7 @@ dialog.reading h3 { margin: 16px 0 6px; font-size: 14px; }
   font: inherit;
   font-size: 13px;
 }
-.reading-text { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.reading-text { width: 100%; }
 .reading-grid select + .reading-text { margin-top: 6px; }
 .reading-depth { width: 6em; margin-right: 8px; }
 .reading-summary { font-size: 13px; }
@@ -186,7 +192,7 @@ dialog.browse { width: min(640px, calc(100vw - 32px)); }
 
 /* A name, not a label, so it is left untranslated. */
 .home-link {
-  font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 12px var(--font);
   color: var(--muted);
   text-decoration: none;
   white-space: nowrap;
@@ -353,7 +359,7 @@ kbd {
   border-bottom-width: 2px;
   border-radius: 5px;
   padding: 1px 7px;
-  font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 12px var(--font);
   background: var(--bg);
 }
 
