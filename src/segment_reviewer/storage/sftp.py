@@ -6,6 +6,7 @@ import errno
 import hashlib
 import os
 import posixpath
+import re
 import stat
 import tempfile
 import threading
@@ -60,18 +61,27 @@ class SSHTarget:
         return f"ssh://{who}{self.host}{where}{self.path}"
 
 
+#: ``C:``, ``C:/data``, ``C:\\data``, ``C:data``: a Windows drive, never a host.
+_WINDOWS_DRIVE = re.compile(r"^[A-Za-z]:")
+
+
 def parse_ssh_spec(spec: str) -> SSHTarget | None:
-    """Recognise ``ssh://[user@]host[:port]/path`` and ``[user@]host:/path``."""
+    """Recognise ``ssh://[user@]host[:port]/path`` and ``[user@]host:/path``.
+
+    A single letter before the colon is a Windows drive, whether or not the
+    path exists — otherwise a mistyped ``C:/dta`` would be sent to a host
+    called ``C``. A one-letter SSH host is still reachable as ``ssh://c/path``.
+    """
     spec = spec.strip()
     if spec.startswith(("ssh://", "sftp://")):
         rest = spec.split("://", 1)[1]
         netloc, _, path = rest.partition("/")
         path = "/" + path if path else "/"
-    elif ":" in spec and not os.path.exists(spec) and not spec.startswith(("/", ".", "~")):
+    elif (":" in spec and not _WINDOWS_DRIVE.match(spec) and not os.path.exists(spec)
+          and not spec.startswith(("/", ".", "~", "\\"))):
         netloc, _, path = spec.partition(":")
-        if not path or "\\" in netloc:  # a Windows drive letter, not a host
+        if not path:
             return None
-        path = path or "."
     else:
         return None
 

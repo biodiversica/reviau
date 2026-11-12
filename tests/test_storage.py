@@ -29,6 +29,21 @@ def test_local_paths_are_not_mistaken_for_ssh(spec):
     assert parse_ssh_spec(spec) is None
 
 
+@pytest.mark.parametrize("spec", [
+    "C:/data/segments", "C:\\data\\segments", "c:/data", "D:segments", "Z:",
+    "C:/no/such/folder/anywhere",          # a typo is still a drive, not a host "C"
+    "\\\\fileserver\\share\\segments",   # a UNC network share
+    "\\\\?\\C:\\data\\segments",          # an extended-length path, colon and all
+])
+def test_windows_paths_are_not_mistaken_for_ssh(spec):
+    assert parse_ssh_spec(spec) is None
+
+
+def test_a_one_letter_host_is_still_reachable_with_the_url_form():
+    target = parse_ssh_spec("ssh://c/data")
+    assert (target.host, target.path) == ("c", "/data")
+
+
 def test_open_backend_picks_local(tmp_path):
     backend = open_backend(str(tmp_path))
     assert isinstance(backend, LocalBackend)
