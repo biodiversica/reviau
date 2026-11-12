@@ -2,7 +2,7 @@
 
 [← English](README.md)
 
-O reviau é uma ferramenta de linha de comando que disponibiliza uma
+O reviau é uma ferramenta que disponibiliza uma
 **interface no navegador para a revisão de uma pasta de segmentos de áudio**.
 Cada clipe é apresentado como espectrograma, acompanhado das informações
 fornecidas pela sua pasta e pelo nome do seu arquivo. O revisor ouve o clipe e
@@ -12,12 +12,15 @@ movidos para `correct/`, `incorrect/` ou `uncertain/`, cada revisão é registra
 em `reviews.csv` (previsão, resultado e os rótulos efetivamente identificados), e
 os rótulos confirmados podem também ser gravados numa tabela de anotações.
 
-A ferramenta aceita qualquer conjunto de clipes, independentemente de como tenha
-sido produzido: a saída de um detector, exemplos recortados manualmente ou as
-previsões de um classificador a ser validado. A pasta de segmentos pode ser
-**local** ou **remota, via SSH**, e a interface pode ser disponibilizada para
-**outra máquina** numa rede local ou numa rede Tailscale. A interface está
-disponível em **Português (Brasil)** e **Inglês**.
+O reviau foi desenvolvido inicialmente para **análises bioacústicas**, para a
+revisão dos segmentos que métodos de detecção como **template matching**, **busca vetorial** (*vector search*) e **classificadores
+personalizados** em validação encontram em gravações de campo, por exemplo as
+do monitoramento acústico passivo. Seu uso, contudo, não se restringe a esses
+métodos, e a ferramenta aceita qualquer conjunto de clipes, independentemente
+de como tenha sido produzido, inclusive exemplos recortados manualmente. A
+pasta de segmentos pode ser **local** ou **remota, via SSH**, e a interface pode
+ser disponibilizada para **outra máquina** numa rede local ou numa rede
+Tailscale. A interface está disponível em **Português (Brasil)** e **Inglês**.
 
 ---
 

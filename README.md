@@ -2,7 +2,7 @@
 
 [Português (Brasil) →](README.pt-BR.md)
 
-reviau is a command-line tool that serves a **browser interface for
+reviau is a tool that provides a **browser interface for
 reviewing a folder of audio segments**. Each clip is presented as a spectrogram,
 together with the information its folder and file name provide. The reviewer
 listens to the clip and records **what it contains**; whether the label it
@@ -11,12 +11,15 @@ Reviewed clips are moved into `correct/`, `incorrect/` or `uncertain/`, every
 review is recorded in `reviews.csv` (prediction, outcome and the labels actually
 identified), and the confirmed labels may also be written to an annotation table.
 
-The tool accepts any collection of clips, regardless of how it was produced: the
-output of a detector, manually cut examples, or the predictions of a classifier
-awaiting validation. The segments folder may be **local** or **remote over
-SSH**, and the interface may be served to **another machine** on a local network
-or a Tailscale network. The interface is available in **English** and
-**Português (Brasil)**.
+reviau was designed primarily for **bioacoustic analysis**, to review the
+segments that detection methods such as **template matching**, **vector
+search** and **custom classifiers** under validation find in field recordings,
+for example those of passive acoustic monitoring. It is not limited to these
+methods, however, and accepts any collection of clips, regardless of how it was
+produced, including manually cut examples. The segments folder may be
+**local** or **remote over SSH**, and the interface may be served to **another
+machine** on a local network or a Tailscale network. The interface is available
+in **English** and **Português (Brasil)**.
 
 ---
 
