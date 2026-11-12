@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>reviau</title>
+  <title>(| reviau |)</title>
   <link rel="stylesheet" href="/static/styles.css">
   <script>
     // Applied before the first paint: left to app.js, which runs at the end of
@@ -15,12 +15,13 @@
       }
     } catch (e) { /* storage unavailable: follow the system */ }
   </script>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🎧</text></svg>">
+  <!-- No tab icon; an empty one keeps the browser from asking for /favicon.ico. -->
+  <link rel="icon" href="data:,">
 </head>
 <body>
   <header class="bar">
     <div class="bar-left">
-      <span class="app-title">(| <span data-i18n="app.title">reviau</span> |)</span>
+      <span class="app-title" data-i18n="app.title">(| reviau |)</span>
     </div>
     <div class="bar-right">
       <span class="counts" id="counts"></span>
