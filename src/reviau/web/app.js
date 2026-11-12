@@ -16,6 +16,11 @@
     browse: $('browse-dialog'), browseUp: $('browse-up'), browseHere: $('browse-here'),
     browseList: $('browse-list'), browseError: $('browse-error'), browseWavs: $('browse-wavs'),
     browseCancel: $('browse-cancel'), browseOpen: $('browse-open'),
+    btnReading: $('btn-reading'), reading: $('reading-dialog'),
+    rdPreset: $('rd-preset'), rdPattern: $('rd-pattern'), rdDatetime: $('rd-datetime'),
+    rdLabelFrom: $('rd-label-from'), rdDepth: $('rd-depth'), rdSummary: $('rd-summary'),
+    rdSamples: $('rd-samples'), rdError: $('rd-error'), rdNote: $('rd-note'),
+    rdCancel: $('rd-cancel'), rdApply: $('rd-apply'),
     progress: $('progress'), meta: $('meta'), controls: $('controls'),
     specWrap: $('spec-wrap'), spec: $('spec'), player: $('player'),
     error: $('error'), ann: $('ann'),
@@ -79,8 +84,11 @@
   // ── label helpers ─────────────────────────────────────────────────────────
   const {
     splitLabels, spectrogramUrl, audioUrl, toggleLabel, buttonLabels, reviewLabels,
-    rememberFolder, THEME_GLYPHS, themeMode, nextTheme,
+    rememberFolder, THEME_GLYPHS, themeMode, nextTheme, patternChoice, readingFromForm,
   } = window.Reviau;
+
+  /** The spectrogram view a browser starts from until the reviewer changes it. */
+  const SPEC_DEFAULTS = { type: 'mel', fmin: 0, fmax: 0, db: -80 };
 
   // ── theme ─────────────────────────────────────────────────────────────────
   // Nothing here names a colour: the stylesheet holds both palettes, and this
@@ -452,17 +460,111 @@
     if (document.activeElement !== el.folderInput) el.folderInput.value = folder;
     el.folderInput.title = folder || t('folder.hint');
     el.folderBar.classList.toggle('empty', !folder);
+    el.btnReading.disabled = !folder;
     el.recentFolders.innerHTML = '';
     for (const path of recentFolders()) el.recentFolders.appendChild(new Option(path));
   }
 
-  /** A line saying the filename pattern read few of the names just opened. */
+  /** A line saying the filename pattern read few of the names just opened, and
+   * why the folder's own reading settings are not in use, if they are not. */
   function renderPattern(pattern) {
-    el.notice.textContent = '';
-    if (!pattern || !pattern.total || pattern.matched === pattern.total) return;
-    const key = pattern.matched === 0 ? 'cli.pattern_none' : 'cli.pattern_some';
-    el.notice.textContent = t(key, { matched: pattern.matched, total: pattern.total })
-      + (pattern.example ? ` ${pattern.example}` : '');
+    const lines = [];
+    if (app.state.reading_error) lines.push(app.state.reading_error);
+    if (pattern && pattern.total && pattern.matched !== pattern.total) {
+      const key = pattern.matched === 0 ? 'cli.pattern_none' : 'cli.pattern_some';
+      lines.push(t(key, { matched: pattern.matched, total: pattern.total })
+        + (pattern.example ? ` ${pattern.example}` : ''));
+    }
+    el.notice.textContent = lines.join(' ');
+  }
+
+  // ── reading settings ──────────────────────────────────────────────────────
+  // How the open folder's names and folders are read. The dialog previews a
+  // change against the folder's pending names before anything is applied.
+  let previewTimer = 0;
+  let previewToken = 0;
+
+  const formReading = () => readingFromForm(
+    el.rdPreset.value, el.rdPattern.value, el.rdDatetime.value,
+    el.rdLabelFrom.value, el.rdDepth.value,
+  );
+
+  function syncPatternField() {
+    el.rdPattern.classList.toggle('hidden', el.rdPreset.value !== 'custom');
+  }
+
+  function openReading() {
+    const reading = app.state.reading;
+    if (!reading) return;
+    const presets = (app.boot && app.boot.presets) || [];
+    const choice = patternChoice(reading.filename_pattern, presets);
+    el.rdPreset.value = choice;
+    el.rdPattern.value = choice === 'custom' ? reading.filename_pattern : '';
+    el.rdDatetime.value = reading.datetime_format;
+    el.rdLabelFrom.value = reading.label_from;
+    el.rdDepth.value = reading.label_depth;
+    el.rdNote.textContent = t('reading.saved_in');
+    syncPatternField();
+    el.reading.showModal();
+    runPreview();
+  }
+
+  function schedulePreview() {
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(runPreview, 250);
+  }
+
+  async function runPreview() {
+    const token = ++previewToken;
+    el.rdError.textContent = '';
+    try {
+      const data = await post('/api/reading/preview', formReading());
+      if (token !== previewToken) return;          // a newer edit already won
+      renderPreview(data);
+      el.rdApply.disabled = false;
+    } catch (err) {
+      if (token !== previewToken) return;
+      el.rdSummary.textContent = '';
+      el.rdSamples.innerHTML = '';
+      el.rdError.textContent = err.message || t('errors.network');
+      el.rdApply.disabled = true;                   // nothing unusable is applied
+    }
+  }
+
+  function renderPreview(data) {
+    const partial = data.total && data.matched !== data.total;
+    el.rdSummary.className = 'reading-summary' + (partial ? ' partial' : '');
+    el.rdSummary.textContent = data.total
+      ? t('reading.matched', { matched: data.matched, total: data.total })
+        + ' · ' + t('reading.source_in_use', { source: t(`reading.from_${data.label_from}`) })
+      : t('reading.no_pending');
+    const cell = (value) => (value === null || value === undefined || value === ''
+      ? '<td class="missing">—</td>' : `<td>${escapeHtml(value)}</td>`);
+    const span = (s) => (s.det_start === null || s.det_end === null
+      ? null : `${s.det_start} – ${s.det_end} s`);
+    const head = ['name', 'label', 'site', 'date', 'window', 'score']
+      .map((k) => `<th>${t(`reading.col_${k}`)}</th>`).join('');
+    const rows = data.samples.map((s) => `<tr>${cell(s.name)}${cell(s.label)}${cell(s.site)}`
+      + `${cell(s.recorded_at)}${cell(span(s))}${cell(s.score)}</tr>`).join('');
+    el.rdSamples.innerHTML = data.samples.length ? `<tr>${head}</tr>${rows}` : '';
+  }
+
+  async function applyReading() {
+    if (app.busy) return;
+    app.busy = true;
+    el.rdApply.disabled = true;
+    try {
+      const data = await post('/api/reading', formReading());
+      app.state = data;
+      el.reading.close();
+      render();
+      renderPattern(data.pattern);
+    } catch (err) {
+      el.rdError.textContent = err.message || t('errors.network');
+    } finally {
+      app.busy = false;
+      el.rdApply.disabled = false;
+    }
   }
 
   async function openFolder(path) {
@@ -554,6 +656,14 @@
     if (e.key === 'Escape') { el.folderInput.value = app.state.folder || ''; el.folderInput.blur(); }
   });
   el.btnBrowse.addEventListener('click', openBrowser);
+  el.btnReading.addEventListener('click', openReading);
+  el.rdPreset.addEventListener('change', () => { syncPatternField(); schedulePreview(); });
+  for (const field of [el.rdPattern, el.rdDatetime, el.rdDepth]) {
+    field.addEventListener('input', schedulePreview);
+  }
+  el.rdLabelFrom.addEventListener('change', schedulePreview);
+  el.rdCancel.addEventListener('click', () => el.reading.close());
+  el.rdApply.addEventListener('click', applyReading);
   el.browseUp.addEventListener('click', () => app.browsing && browseTo(app.browsing.parent));
   el.browseCancel.addEventListener('click', () => el.browse.close());
   el.browseOpen.addEventListener('click', () => {
@@ -586,7 +696,8 @@
   el.lang.addEventListener('change', () => setLanguage(el.lang.value));
 
   document.addEventListener('keydown', (e) => {
-    if (e.target.matches('input, select, textarea') || el.help.open || el.browse.open) return;
+    if (e.target.matches('input, select, textarea') || el.help.open || el.browse.open
+        || el.reading.open) return;
     if (!app.state.segment) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
 
@@ -623,7 +734,7 @@
       el.lang.innerHTML = '';
       for (const lang of boot.languages) el.lang.add(new Option(lang.name, lang.code));
 
-      const spec = { ...boot.spec_defaults, ...safeParse(localStorage.getItem('reviau.spec')) };
+      const spec = { ...SPEC_DEFAULTS, ...safeParse(localStorage.getItem('reviau.spec')) };
       el.specType.value = spec.type || 'mel';
       el.specFmin.value = spec.fmin ?? 0;
       el.specFmax.value = spec.fmax ?? 0;

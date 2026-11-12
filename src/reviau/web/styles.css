@@ -82,6 +82,46 @@ body {
 .notice { color: var(--warn); font-size: 13px; text-align: center; }
 .notice:empty { display: none; }
 
+/* ── reading settings ────────────────────────────────────────────────────── */
+/* Wide: the preview table lists full file names, and a custom pattern is as long
+   as the names it describes. On a narrower window it takes the window's width. */
+dialog.reading { width: min(1520px, calc(100vw - 32px)); max-width: none; }
+dialog.reading h3 { margin: 16px 0 6px; font-size: 14px; }
+.reading-grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 12px;
+  align-items: center;
+  margin-top: 10px;
+}
+.reading-grid select, .reading-text, .reading-depth {
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+.reading-text { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.reading-grid select + .reading-text { margin-top: 6px; }
+.reading-depth { width: 6em; margin-right: 8px; }
+.reading-summary { font-size: 13px; }
+.reading-summary.partial { color: var(--warn); }
+.reading-table-wrap { overflow-x: auto; margin-top: 6px; }
+.reading-table { border-collapse: collapse; width: 100%; font-size: 12px; }
+.reading-table th, .reading-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 4px 8px;
+  text-align: left;
+  white-space: nowrap;
+}
+.reading-table th { color: var(--muted); font-weight: 600; }
+.reading-table td.missing { color: var(--muted); }
+@media (max-width: 560px) {
+  .reading-grid { grid-template-columns: 1fr; }
+}
+
 /* ── folder picker ───────────────────────────────────────────────────────── */
 dialog.browse { width: min(640px, calc(100vw - 32px)); }
 .browse-path { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }

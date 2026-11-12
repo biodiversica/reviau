@@ -6,11 +6,7 @@ reviewing survives a restart — and, for a remote folder, is shared by whoever
 opens it next. Once that file exists it *is* the list: the reviewer edits it from
 the GUI, and nothing is added back behind their back.
 
-``--labels`` overrides both: naming labels on the command line is an explicit
-choice of what to offer, so those are the whole list the session starts with,
-replacing anything stored, and are written out in turn.
-
-Opening a folder writes nothing: a seeded or overriding list is held in memory
+Opening a folder writes nothing: a seeded list is held in memory
 and written out with the first segment reviewed (:meth:`LabelStore.flush`), so
 a folder opened by mistake is left exactly as it was. An edit made in the GUI is
 a deliberate change and is written at once.
@@ -44,23 +40,16 @@ class LabelStore:
         backend: Backend,
         path: str,
         *,
-        configured=(),
         discovered=(),
-        persist: bool = True,
     ) -> None:
         self.backend = backend
-        self.path = path if persist else ""
+        #: Where the list is kept; empty keeps it for the session only.
+        self.path = path
         self.error = ""
         #: A list worked out on opening that the file does not hold yet.
         self._unsaved = False
         stored = self._read()
-        asked_for = merge(configured)
-        if asked_for:
-            # Labels named on the command line are the list for this run: only
-            # those are offered, whatever the collection uses or the file holds.
-            self._labels = asked_for
-            self._unsaved = self._labels != stored
-        elif stored is None:
+        if stored is None:
             # First run: the labels the collection already uses.
             self._labels = merge(discovered)
             self._unsaved = True

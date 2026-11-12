@@ -11,7 +11,8 @@ def serve(workspace, token=None):
 
 @pytest.fixture
 def client(segments_dir):
-    workspace = make_workspace(segments_dir, labels=["rain", "BOAALB", "PHYLUT"])
+    (segments_dir / "labels.txt").write_text("rain\nBOAALB\nPHYLUT\n", encoding="utf-8")
+    workspace = make_workspace(segments_dir)
     return serve(workspace), workspace.session
 
 
@@ -242,3 +243,45 @@ def test_browse_over_http(segments_dir):
 def test_browse_starts_in_the_open_folder(segments_dir):
     api = serve(make_workspace(segments_dir))
     assert api.get("/api/browse").json()["path"] == str(segments_dir)
+
+
+# ── reading settings over HTTP ───────────────────────────────────────────────
+def test_the_state_carries_the_folders_reading_settings(client):
+    api, _ = client
+    reading = api.get("/api/state").json()["reading"]
+    assert reading == {"filename_pattern": "default", "datetime_format": "%Y%m%d%H%M%S",
+                       "label_from": "auto", "label_depth": 0}
+    boot = api.get("/api/bootstrap").json()
+    assert boot["presets"] == ["default", "vector-search"]
+    assert boot["label_from_choices"] == ["auto", "folder", "filename", "none"]
+
+
+def test_a_preview_reads_the_pending_names_without_applying_anything(client, segments_dir):
+    api, _ = client
+    data = api.post("/api/reading/preview", json={"filename_pattern": "[site]_[extra]"}).json()
+    assert (data["matched"], data["total"]) == (3, 3)
+    assert data["samples"][0]["name"].endswith(".wav")
+    assert data["label_from"] == "folder"
+    assert api.get("/api/state").json()["reading"]["filename_pattern"] == "default"
+    assert not (segments_dir / "reviau.json").exists()
+
+
+def test_a_preview_of_unusable_settings_says_why(client):
+    api, _ = client
+    res = api.post("/api/reading/preview", json={"filename_pattern": "[site]_[speceis]"})
+    assert res.status_code == 400
+    assert "speceis" in res.json()["detail"]
+
+
+def test_applying_settings_over_http(label_on_top_dir):
+    api = serve(make_workspace(label_on_top_dir))
+    data = api.post("/api/reading", json={"label_depth": 1}).json()
+    assert data["reading"]["label_depth"] == 1
+    assert data["labels"] == ["BOAALB", "PHYLUT"]
+    assert (label_on_top_dir / "reviau.json").exists()
+
+
+def test_reading_settings_need_a_folder_open():
+    api = serve(make_workspace())
+    assert api.post("/api/reading/preview", json={}).status_code == 409
+    assert api.post("/api/reading", json={}).status_code == 409

@@ -19,8 +19,6 @@ __all__ = [
 def open_backend(
     spec: str,
     *,
-    ssh_user: str | None = None,
-    ssh_port: int | None = None,
     ssh_key: str | None = None,
     ssh_password: str | None = None,
     known_hosts: str | None = None,
@@ -28,14 +26,14 @@ def open_backend(
     cache_dir: str | None = None,
     use_ssh_config: bool = True,
 ) -> Backend:
-    """Open the segments folder, locally or over SSH depending on *spec*."""
+    """Open the segments folder, locally or over SSH depending on *spec*.
+
+    The user and port come from *spec* itself (``ssh://user@host:port/path``)
+    or from ``~/.ssh/config``, so each folder opened keeps its own.
+    """
     target = parse_ssh_spec(spec)
     if target is None:
         return LocalBackend(spec)
-    if ssh_user:
-        target.user = ssh_user
-    if ssh_port:
-        target.port = ssh_port
     if use_ssh_config:
         target.apply_ssh_config()
     if ssh_key:

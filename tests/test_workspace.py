@@ -47,10 +47,14 @@ def test_a_file_is_not_a_folder(segments_dir):
         make_workspace().open(str(segments_dir / "segment_sources.csv"))
 
 
-def test_every_folder_opened_gets_the_command_line_settings(label_on_top_dir):
-    workspace = make_workspace(label_depth=1)
-    workspace.open(str(label_on_top_dir))
-    assert workspace.session.label_choices() == ["BOAALB", "PHYLUT"]
+def test_command_line_options_apply_to_every_folder_reading_stays_per_folder(
+        label_on_top_dir, segments_dir):
+    workspace = make_workspace(multi_label=False, label_depth=1)
+    for folder in (label_on_top_dir, segments_dir):
+        workspace.open(str(folder))
+        assert workspace.session.config.multi_label is False
+        # How names are read is the folder's own setting, not the workspace's.
+        assert workspace.session.config.label_depth == 0
 
 
 # ── the folder picker ────────────────────────────────────────────────────────

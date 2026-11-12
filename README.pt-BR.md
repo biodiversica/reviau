@@ -42,14 +42,14 @@ clipe como `BOAALB` e mantém as três pastas acima dele. Um clipe situado
 diretamente na pasta de segmentos não tem rótulo.
 
 **Conjuntos com a pasta da classe no topo.** Alguns conjuntos são organizados de
-forma inversa, com os pontos *dentro* de cada pasta de classe. Nesse caso,
-`--label-depth` indica qual nível carrega o rótulo, contado a partir da pasta de
-segmentos. As pastas abaixo desse nível são lidas, mas não mantidas: não são
+forma inversa, com os pontos *dentro* de cada pasta de classe. Nesse caso, o
+**nível do rótulo**, nas [configurações de leitura](#configurações-de-leitura),
+indica qual nível carrega o rótulo, contado a partir da pasta de segmentos. As pastas abaixo desse nível são lidas, mas não mantidas: não são
 oferecidas como rótulos, e o clipe revisado é arquivado apenas sob o seu rótulo,
 uma vez que o ponto e a data já constam no nome do arquivo.
 
 ```
-segmentos/                             # --label-depth 1
+segmentos/                             # nível do rótulo 1
 ├── BOAALB/PONTO_A/20240115/clipe.wav  → rótulo BOAALB; as duas pastas abaixo não são mantidas
 ├── BOAALB/POCA/clipe.wav              → rótulo BOAALB
 └── PHYLUT/clipe.wav                   → rótulo PHYLUT (menos profundo que o nível, ainda rotulado)
@@ -71,9 +71,8 @@ como
   nenhuma parte do padrão pode ainda assim ser revisado**; a interface apenas
   exibe menos informações sobre ele.
 
-Conjuntos nomeados segundo outra convenção podem ser descritos com
-`--filename-pattern`; consulte
-[Outras convenções de nomenclatura](#outras-convenções-de-nomenclatura).
+Conjuntos nomeados segundo outra convenção podem ser descritos nas
+[configurações de leitura](#configurações-de-leitura).
 
 ---
 
@@ -127,8 +126,8 @@ reviau --lang pt-BR
 # Abrir uma pasta local na inicialização, com a interface nesta máquina
 reviau ~/segmentos --lang pt-BR
 
-# Conjunto fixo de botões de rótulo e tabela de anotações
-reviau ~/segmentos --lang pt-BR --labels "BOAALB, PHYLUT, chuva" --annotations
+# Uma lista de rótulos compartilhada por todas as pastas e tabela de anotações
+reviau ~/segmentos --lang pt-BR --labels-file ~/classes.txt --annotations
 
 # Segmentos num servidor, revisados a partir de outro computador
 reviau ssh://usuario@servidor/dados/segmentos --lang pt-BR
@@ -152,8 +151,10 @@ comando precise ser reiniciado. Quando o comando é iniciado sem a pasta
   local, um caminho iniciado por `~/` ou `ssh://usuario@host/caminho` para uma
   pasta remota, acessada com as configurações SSH da linha de comando
   (`--ssh-key`, `~/.ssh/config`, o agente SSH etc.).
-- Toda pasta aberta recebe as opções com que o comando foi iniciado: o padrão de
-  nome, `--label-depth`, `--output`, `--labels` e `--annotations`.
+- Toda pasta aberta recebe as opções com que o comando foi iniciado, como
+  `--output`, `--labels-file` e `--annotations`. A forma de leitura dos nomes é
+  uma configuração da própria pasta; consulte
+  [Configurações de leitura](#configurações-de-leitura).
 - **A abertura de uma pasta não grava nada nela.** As pastas de veredito, o
   registro da revisão e a lista de rótulos são criados quando o primeiro segmento
   é revisado; assim, uma pasta aberta por engano, por erro de digitação ou um
@@ -180,8 +181,9 @@ comando precise ser reiniciado. Quando o comando é iniciado sem a pasta
 | **✘ Incorreto** | A previsão está incorreta. O segmento é salvo com os rótulos selecionados, que descrevem o que o clipe efetivamente contém, ou, se nenhum estiver selecionado, como sem nenhum rótulo da lista. O botão indica o caso: *✘ Incorreto → TURDRU* ou *✘ Incorreto · nenhum rótulo da lista*. |
 | **? Incerto** | Não é possível avaliar o clipe. Ele é arquivado em `uncertain/` e excluído das contagens de corretos e incorretos e da tabela de anotações. |
 | **← Anterior / Próximo →** | Navega entre os segmentos sem registrar decisão. |
-| **Tipo / Mínimo (Hz) / Máximo (Hz) / Limite inferior (dB)** | Redesenham o espectrograma imediatamente, em eixo de frequência mel, linear ou logarítmico. O reprodutor de áudio não é afetado, de modo que a reprodução continua enquanto a visualização é alterada. |
+| **Tipo / Mínimo (Hz) / Máximo (Hz) / Limite inferior (dB)** | Redesenham o espectrograma imediatamente, em eixo de frequência mel, linear ou logarítmico. O reprodutor de áudio não é afetado, de modo que a reprodução continua enquanto a visualização é alterada. A visualização é armazenada no navegador. |
 | **✎** | Edita a lista de rótulos: cada botão exibe um **×** que o remove, e o campo abaixo adiciona um novo rótulo. As alterações são salvas no arquivo da lista de rótulos (por padrão, `labels.txt`, na pasta de segmentos). |
+| **⚙** | Abre as [configurações de leitura](#configurações-de-leitura) da pasta: padrão de nome, formato de data e hora, origem do rótulo e nível do rótulo. |
 | **⟳** | Reexamina a pasta, por exemplo após a inclusão de novos segmentos. |
 | **Idioma** | Alterna a interface entre Português e Inglês. |
 | **◐ / ☀ / ☾** | Tema: padrão do sistema, claro ou escuro; cada clique seleciona o seguinte. O tema selecionado é armazenado no navegador. O espectrograma mantém suas cores nos dois temas. |
@@ -223,17 +225,15 @@ quando o primeiro segmento é revisado. A partir de então, o arquivo constitui 
 lista, que pode ser editada pela interface ou manualmente (linhas em branco e
 linhas iniciadas por `#` são ignoradas).
 
-Quando `--labels` é informado, apenas esses rótulos são oferecidos na sessão.
-Eles substituem o conteúdo do arquivo e são gravados em seu lugar.
-
 A lista nunca é ampliada automaticamente: um novo exame da pasta que encontre uma
 pasta nova não acrescenta o seu nome à lista. A remoção de rótulos da lista
 também é segura, uma vez que o rótulo do próprio clipe sempre aparece como botão,
 conste ou não da lista, e um nome digitado no campo é acrescentado à lista e
 selecionado para o segmento em exibição.
 
-`--labels-file` armazena a lista em outro local, e `--no-labels-file` mantém as
-alterações apenas durante a sessão atual.
+`--labels-file` armazena a lista em outro local. Um caminho relativo é resolvido
+dentro de cada pasta de segmentos; um caminho absoluto, como `~/classes.txt`,
+fornece a mesma lista a todas as pastas abertas.
 
 ### Onde o clipe revisado é arquivado
 
@@ -261,7 +261,7 @@ PONTO_A/BOAALB/clipe.wav
   Quando nenhum rótulo é acrescentado (um Correto simples, ou um Incorreto sem
   nenhum rótulo da lista), e para todo segmento marcado como Incerto, o nome
   permanece inalterado.
-- Com `--label-depth`, as pastas *abaixo* do rótulo **não** são recriadas:
+- Com nível do rótulo acima de 0, as pastas *abaixo* do rótulo **não** são recriadas:
   `BOAALB/PONTO_A/20240115/clipe.wav` corrigido para TURDRU passa a
   `incorrect/BOAALB/clipe_TURDRU.wav`, com uma pasta por rótulo previsto contendo
   diretamente os clipes.
@@ -305,7 +305,7 @@ veredito. O registro é sempre gravado e constitui o histórico da revisão:
 | --- | --- |
 | `reviewed_at` | Data e hora da revisão, com o fuso horário |
 | `source`, `destination` | O local original do clipe, relativo à pasta de segmentos, e o novo local, relativo à pasta de saída |
-| `predicted`, `score` | O rótulo com que o clipe chegou e o escore indicado no seu nome |
+| `predicted`, `score` | O rótulo com que o clipe chegou e a pontuação indicada no seu nome |
 | `outcome` | `correct`, `incorrect`, `uncertain` ou `labelled` |
 | `labels` | Os rótulos identificados pelo revisor no clipe, separados por `;`; vazio quando o clipe não contém nenhum rótulo da lista |
 | `added` | Os rótulos além da previsão: a correção ou uma espécie adicional |
@@ -339,29 +339,51 @@ acumulam na mesma tabela.
 
 ---
 
-## Outras convenções de nomenclatura
+## Configurações de leitura
+
+A forma como os nomes de arquivo e as pastas de um conjunto são lidos é uma
+característica do conjunto; por isso, é definida por pasta, no botão **⚙** ao
+lado da caixa de pasta, e não na linha de comando. As configurações são salvas em
+**`reviau.json`**, na pasta de segmentos, de modo que a pasta é reaberta com as
+suas próprias configurações em qualquer máquina e em qualquer navegador. Assim
+como a lista de rótulos, o arquivo é gravado apenas quando as configurações são
+aplicadas, e nunca quando a pasta é simplesmente aberta.
+
+| Configuração | Função |
+| --- | --- |
+| **Padrão de nome** | Como os nomes de arquivo são lidos: o padrão *padrão*, a predefinição *busca vetorial*, ou um modelo ou expressão regular personalizados, descritos abaixo |
+| **Formato de data e hora** | O formato `strptime` da data e da hora capturadas (por padrão, `%Y%m%d%H%M%S`) |
+| **Origem do rótulo** | *Automática* (o nome do arquivo quando o padrão captura um rótulo; caso contrário, a pasta), *Pasta*, *Nome do arquivo* ou *Nenhuma* |
+| **Nível do rótulo** | O nível da pasta que carrega o rótulo, contado a partir da pasta de segmentos: 0 é a pasta que contém o clipe, e 1 é a primeira pasta abaixo da pasta de segmentos |
+
+Durante a edição das configurações, uma **pré-visualização** indica quantos dos
+nomes pendentes o padrão reconhece e o que ele lê dos primeiros: rótulo, ponto,
+data, janela e pontuação. Configurações que não podem ser utilizadas, como um modelo
+com um campo desconhecido, são informadas com o motivo, e **Aplicar** permanece
+indisponível até que sejam corrigidas. A aplicação das configurações as salva e
+reabre a pasta com elas.
 
 Nomes que não correspondem ao padrão podem ainda assim ser revisados; a interface
 exibe menos informações sobre eles, e nenhuma que não possa ler com segurança.
-Para que o ponto, o horário, a janela e o escore sejam exibidos,
-`--filename-pattern` deve descrever como os nomes são formados.
+Quando uma pasta é aberta, um aviso abaixo da caixa de pasta informa os nomes que
+o padrão não reconhece.
 
 ### Elaboração de um modelo
 
-A forma mais simples consiste em **escrever o nome, com as partes identificadas
-entre colchetes**. Todo o texto fora dos colchetes é comparado literalmente.
+A forma mais simples de padrão personalizado consiste em **escrever o nome, com
+as partes identificadas entre colchetes**. Todo o texto fora dos colchetes é
+comparado literalmente. Para nomes como
+`PONTO_A_20240115T053000_REC_12.0_17.0_BOAALB_0.873.wav`:
 
-```bash
-# PONTO_A_20240115T053000_REC_12.0_17.0_BOAALB_0.873.wav
-reviau ~/segmentos \
-    --filename-pattern '[site]_YYYYMMDDTHHMMSS_REC_[start_time]_[end_time]_[label]_[score]'
+```
+[site]_YYYYMMDDTHHMMSS_REC_[start_time]_[end_time]_[label]_[score]
 ```
 
 | No modelo | Corresponde a |
 | --- | --- |
 | `[site]`, `[label]` | texto livre, que pode conter sublinhados |
 | `YYYYMMDD`, `HHMMSS` | a data e a hora, escritas como indicado ou como `[date]` e `[time]` |
-| `[datetime]` | a data e a hora em conjunto, em qualquer formato, a ser usado com `--datetime-format` |
+| `[datetime]` | a data e a hora em conjunto, em qualquer formato, descrito pelo formato de data e hora |
 | `[start_time]`, `[end_time]` | a janela do clipe na gravação, em segundos |
 | `[score]` | um valor de similaridade ou de confiança |
 | `[extra]` | qualquer texto restante, exibido na interface como *Outros* |
@@ -371,59 +393,49 @@ reviau ~/segmentos \
 Todos os campos são opcionais, mas o modelo deve corresponder ao nome **inteiro**.
 Uma correspondência parcial preencheria a interface com informações lidas das
 partes erradas do nome e, por isso, é tratada como ausência de correspondência.
-Um campo desconhecido, como o erro de digitação `[speceis]`, é recusado na
-inicialização, em vez de ser ignorado.
+Um campo desconhecido, como o erro de digitação `[speceis]`, é recusado, em vez
+de ser ignorado.
 
 ### Elaboração de uma expressão regular
 
-Para nomes que nenhum modelo consegue descrever, `--filename-pattern` também
+Para nomes que nenhum modelo consegue descrever, o padrão personalizado também
 aceita **qualquer expressão regular com grupos nomeados**: `site`, `date`, `time`,
 `datetime`, `start`, `end`, `label`, `score` e `extra`. Todos são opcionais, e a
-expressão é aplicada ao nome do arquivo sem a extensão:
+expressão é aplicada ao nome do arquivo sem a extensão. Para nomes como
+`BOAALB-pontoA-202401150530.wav`, com o rótulo primeiro e um carimbo de data e
+hora de 12 dígitos:
 
-```bash
-# rótulo primeiro, depois o ponto, depois um carimbo de data e hora de 12 dígitos:
-# BOAALB-pontoA-202401150530.wav
-reviau ~/segmentos \
-    --filename-pattern '^(?P<label>[A-Z]+)-(?P<site>\w+)-(?P<datetime>\d{12})$' \
-    --datetime-format '%Y%m%d%H%M'
 ```
+^(?P<label>[A-Z]+)-(?P<site>\w+)-(?P<datetime>\d{12})$
+```
+
+com o formato de data e hora `%Y%m%d%H%M`.
 
 ### Origem do rótulo
 
-`--label-from` define a origem: `folder` (o padrão), `filename` (o grupo `label`
-do padrão) ou `none`. Um padrão que captura um grupo `label` seleciona
-`filename` automaticamente, salvo indicação diferente em `--label-from`. Nesse
-modo, o clipe é arquivado diretamente sob o resultado e o rótulo previsto, por
-exemplo `incorrect/BOAALB/clipe_TURDRU.wav`.
+Com a origem *Automática*, um padrão que captura um grupo `label` lê o rótulo do
+nome do arquivo, e qualquer outro padrão o lê da pasta. Quando o rótulo é lido do
+nome do arquivo, o clipe é arquivado diretamente sob o resultado e o rótulo
+previsto, por exemplo `incorrect/BOAALB/clipe_TURDRU.wav`.
 
-Para manter as pastas, a origem `folder` deve ser solicitada explicitamente. Para
-segmentos organizados como `[rótulo]/[ponto]_AAAAMMDD/clipe.wav`, o comando
-abaixo lê o rótulo da pasta superior, mantém a pasta do ponto abaixo dela e
-continua a ler o ponto, os horários e o escore do nome do arquivo:
+Para manter as pastas, a origem *Pasta* deve ser selecionada explicitamente. Para
+segmentos organizados como `[rótulo]/[ponto]_AAAAMMDD/clipe.wav`, a origem *Pasta*
+com nível do rótulo 1 lê o rótulo da pasta superior e mantém a pasta do ponto
+abaixo dela, enquanto o ponto, os horários e a pontuação continuam a ser lidos do
+nome do arquivo.
 
-```bash
-reviau ~/segmentos \
-    --filename-pattern '[site]_YYYYMMDDTHHMMSS_REC_[start_time]_[end_time]_[label]_[score]' \
-    --label-from folder --label-depth 1
-```
+### A predefinição de busca vetorial
 
-### A predefinição vector-search
-
-`--filename-pattern vector-search` lê nomes no formato
-`PONTO_AAAAMMDD_HHMMSS_INÍCIO-FIMs_ESCORE_RÓTULO.wav`, gravados pelos notebooks
-de busca vetorial bioacústica, com o **rótulo e o escore de similaridade no
-nome**:
-
-```bash
-reviau ~/vector_search_segments --filename-pattern vector-search --annotations
-```
+A predefinição *busca vetorial* lê nomes no formato
+`PONTO_AAAAMMDD_HHMMSS_INÍCIO-FIMs_PONTUAÇÃO_RÓTULO.wav`, gravados pelos notebooks
+de busca vetorial bioacústica, com o **rótulo e a pontuação de similaridade no
+nome**.
 
 Como o rótulo faz parte do nome, os clipes são arquivados diretamente sob o
 resultado e o rótulo previsto (`correct/BOAALB/`, `incorrect/BOAALB/`), e os
 rótulos acrescentados são incluídos no fim do nome, como nos demais casos: um
 segmento chamado `..._0.873_BOAALB.wav` e corrigido para TURDRU passa a
-`incorrect/BOAALB/..._0.873_BOAALB_TURDRU.wav`. O escore é exibido ao lado do
+`incorrect/BOAALB/..._0.873_BOAALB_TURDRU.wav`. A pontuação é exibida ao lado do
 rótulo na interface e também consta do registro.
 
 ---
@@ -442,9 +454,13 @@ reviau servidor:/dados/segmentos           # endereço no estilo scp
 reviau ssh://servidor/dados/segmentos --ssh-key ~/.ssh/id_campo
 ```
 
-Apelidos de host, usuários, portas e arquivos de identidade definidos em
-`~/.ssh/config` são aplicados, e um agente SSH em execução é utilizado. Uma chave
-de host desconhecida é recusada, salvo se `--accept-new-host-key` for informado.
+O usuário e a porta são informados no endereço (`ssh://usuario@host:porta/caminho`)
+ou obtidos de `~/.ssh/config`, juntamente com apelidos de host e arquivos de
+identidade, e um agente SSH em execução é utilizado. Quando não é possível usar
+uma chave nem um agente, a senha é lida da variável de ambiente
+`REVIAU_SSH_PASSWORD`; ela nunca é aceita na linha de comando, onde ficaria
+registrada no histórico do terminal. Uma chave de host desconhecida é recusada,
+salvo se `--accept-new-host-key` for informado.
 
 Nada é gravado fora da pasta de segmentos e da pasta de saída, e nenhum clipe é
 apagado: os arquivos são apenas movidos dentro dessas pastas.
@@ -497,36 +513,14 @@ reviau [SEGMENTOS] [OPÇÕES]
                                 pasta pode ser aberta, e trocada, no navegador
 
   -l, --lang TEXT               Idioma inicial da interface: en, pt-BR  [padrão: en]
-      --labels TEXT             Os únicos rótulos oferecidos, separados por
-                                vírgulas. Substitui uma lista já gravada
-      --labels-file TEXT        Local da lista de rótulos, um rótulo por linha
-                                [padrão: <SEGMENTOS>/labels.txt]
-      --no-labels-file          Não lê nem grava a lista; as alterações valem apenas
-                                na sessão
-      --label-from TEXT         Origem do rótulo: folder, filename ou none
-                                [padrão: folder]
-      --label-depth INTEGER     Nível da pasta que carrega o rótulo, contado a
-                                partir de SEGMENTOS: 1 para RÓTULO/PONTO/clipe.wav;
-                                0 é a pasta que contém o clipe  [padrão: 0]
-      --filename-pattern TEXT   'default', 'vector-search', um modelo como
-                                '[site]_YYYYMMDD_HHMMSS_[label]_[score]', ou uma
-                                expressão regular com os grupos nomeados site,
-                                date, time, datetime, start, end, label, score,
-                                extra  [padrão: default]
-      --datetime-format TEXT    Formato strptime da data e hora capturadas
-                                [padrão: %Y%m%d%H%M%S]
+      --labels-file TEXT        Local da lista de rótulos, um rótulo por linha.
+                                Caminhos relativos ficam dentro de cada pasta de
+                                segmentos; um caminho absoluto compartilha uma lista
+                                entre as pastas  [padrão: <SEGMENTOS>/labels.txt]
       --no-multi-label          Limita cada segmento a um rótulo (por padrão, um
                                 segmento pode receber vários rótulos)
       --annotations             Grava também a tabela de rótulos confirmados
       --annotations-path TEXT   Local da tabela  [padrão: <saída>/annotations.csv]
-
-      --spec-type [mel|fft|log] Eixo de frequência inicial: escala mel, Hz linear
-                                ou Hz logarítmico  [padrão: mel]
-      --fmin INTEGER            Frequência mínima inicial, em Hz  [padrão: 0]
-      --fmax INTEGER            Frequência máxima inicial, em Hz; 0 = Nyquist
-                                [padrão: 0]
-      --db-floor INTEGER        Limite inferior inicial da escala de cores, em dB
-                                [padrão: -80]
 
   -o, --output TEXT             Pasta em que os segmentos revisados e o
                                 reviews.csv são gravados
@@ -538,7 +532,7 @@ reviau [SEGMENTOS] [OPÇÕES]
       --no-auth                 Disponibiliza a interface sem token de acesso
       --open / --no-open        Abre o navegador na inicialização  [padrão: abre]
 
-      --ssh-user / --ssh-port / --ssh-key / --ssh-password
+      --ssh-key TEXT            Arquivo de chave privada para conexões SSH
       --known-hosts TEXT        Arquivo known_hosts adicional a ser considerado
                                 confiável
       --accept-new-host-key     Aceita uma chave de host SSH desconhecida
@@ -546,7 +540,14 @@ reviau [SEGMENTOS] [OPÇÕES]
                                 [padrão: uma pasta temporária]
 
       --version                 Exibe a versão e encerra
+
+  Ambiente: REVIAU_SSH_PASSWORD  Senha SSH, quando não é possível usar chave ou agente
 ```
+
+O padrão de nome, o formato de data e hora, a origem do rótulo e o nível do
+rótulo são definidos por pasta nas
+[configurações de leitura](#configurações-de-leitura), e a visualização do
+espectrograma é definida na interface e armazenada no navegador.
 
 ### Pastas de veredito e idioma
 

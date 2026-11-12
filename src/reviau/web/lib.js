@@ -119,10 +119,28 @@
     return THEME_MODES[(THEME_MODES.indexOf(themeMode(mode)) + 1) % THEME_MODES.length];
   }
 
+  /** Which choice of the pattern menu a stored filename pattern belongs to. */
+  function patternChoice(pattern, presets) {
+    const value = String(pattern === undefined || pattern === null ? '' : pattern).trim();
+    if (!value) return 'default';
+    return (presets || []).includes(value) ? value : 'custom';
+  }
+
+  /** The reading settings the dialog's fields describe, as the server takes them. */
+  function readingFromForm(choice, custom, datetimeFormat, labelFrom, depth) {
+    const pattern = choice === 'custom' ? String(custom || '').trim() : choice;
+    return {
+      filename_pattern: pattern || 'default',
+      datetime_format: String(datetimeFormat || '').trim(),
+      label_from: labelFrom || 'auto',
+      label_depth: clampInt(depth, 0, 99, 0),
+    };
+  }
+
   const lib = {
     SPEC_TYPES, splitLabels, clampInt, mediaKey,
     spectrogramUrl, audioUrl, toggleLabel, buttonLabels, reviewLabels, rememberFolder,
-    THEME_MODES, THEME_GLYPHS, themeMode, nextTheme,
+    THEME_MODES, THEME_GLYPHS, themeMode, nextTheme, patternChoice, readingFromForm,
   };
   if (typeof module === 'object' && module.exports) module.exports = lib;
   else root.Reviau = lib;

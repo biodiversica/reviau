@@ -15,6 +15,9 @@ from .config import ReviewConfig
 from .outcome import OUTCOMES
 from .review import ReviewSession, StaleSegment
 from .spectrogram import SPEC_TYPES, SpectrogramError
+from .naming import DEFAULT_DATETIME_FORMAT, PRESETS
+from .reading import LABEL_FROM_CHOICES, Reading, ReadingError
+from .reading import preview as preview_reading
 from .storage import LocalBackend
 from .workspace import OpenError, Workspace, browse
 
@@ -44,6 +47,19 @@ class OpenBody(BaseModel):
     """A segments folder to open: a local path, or ssh://[user@]host[:port]/path."""
 
     path: str
+
+
+class ReadingBody(BaseModel):
+    """How the open folder's names and folders are to be read."""
+
+    filename_pattern: str = "default"
+    datetime_format: str = DEFAULT_DATETIME_FORMAT
+    label_from: str = "auto"
+    label_depth: int = 0
+
+    def reading(self) -> Reading:
+        return Reading(self.filename_pattern, self.datetime_format,
+                       self.label_from, self.label_depth)
 
 
 class LabelsBody(BaseModel):
@@ -83,7 +99,8 @@ def _state_payload(workspace: Workspace) -> dict:
     if session is None:
         # No folder open yet: the GUI shows the folder box and nothing else.
         return {"folder": None, "output": None, "segment": None, "counts": {},
-                "labels": [], "label_store": {}, "annotations": {}, "review_log": None}
+                "labels": [], "label_store": {}, "annotations": {}, "review_log": None,
+                "reading": None, "reading_error": ""}
     view = session.view()
     return {
         "folder": session.backend.display,
@@ -94,6 +111,8 @@ def _state_payload(workspace: Workspace) -> dict:
         "label_store": _labels_payload(session),
         "annotations": _annotation_payload(session),
         "review_log": {"path": session.log.path, "rows": session.log.rows},
+        "reading": session.config.reading.as_dict(),
+        "reading_error": workspace.reading_error,
     }
 
 
@@ -217,12 +236,8 @@ def create_app(workspace: Workspace, config: ReviewConfig,
             "lang": config.lang,
             "multi_label": config.multi_label,
             "outcomes": list(OUTCOMES),
-            "spec_defaults": {
-                "type": config.spec_type,
-                "fmin": config.freq_min_hz,
-                "fmax": config.freq_max_hz,
-                "db": config.db_min,
-            },
+            "presets": list(PRESETS),
+            "label_from_choices": list(LABEL_FROM_CHOICES),
             "state": _state_payload(workspace),
             "pattern": _pattern_payload(app.state.pattern),
         }
@@ -245,6 +260,25 @@ def create_app(workspace: Workspace, config: ReviewConfig,
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except Exception as exc:  # noqa: BLE001 - shown to the reviewer verbatim
             raise HTTPException(status_code=400, detail=f"The folder {body.path} could not be opened: {exc}") from exc
+        app.state.pattern = opened.pattern
+        return {**_state_payload(workspace), "pattern": _pattern_payload(opened.pattern)}
+
+    @app.post("/api/reading/preview")
+    async def reading_preview(body: ReadingBody):
+        """What the given settings would make of the open folder's names."""
+        try:
+            return preview_reading(current(), body.reading())
+        except ReadingError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/api/reading")
+    async def apply_reading(body: ReadingBody):
+        """Read the open folder with these settings, and save them beside it."""
+        current()
+        try:
+            opened = workspace.apply_reading(body.reading())
+        except (ReadingError, OpenError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         app.state.pattern = opened.pattern
         return {**_state_payload(workspace), "pattern": _pattern_payload(opened.pattern)}
 

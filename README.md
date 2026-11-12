@@ -42,13 +42,13 @@ the segments folder has no label.
 
 **Collections with the class folder at the top.** Some collections are organised
 the other way round, with the sites *inside* each class folder. In that case,
-`--label-depth` specifies which level carries the label, counting down from the
-segments folder. The folders below that level are read but not retained: they are
+the **label depth** in the [reading settings](#reading-settings) specifies which
+level carries the label, counting down from the segments folder. The folders below that level are read but not retained: they are
 not offered as labels, and a reviewed clip is filed under its label alone, since
 the site and the date are already present in the file name.
 
 ```
-segments/                          # --label-depth 1
+segments/                          # label depth 1
 ├── BOAALB/PONTO_A/20240115/clip.wav  → label BOAALB; the two folders below are not retained
 ├── BOAALB/POCA/clip.wav              → label BOAALB
 └── PHYLUT/clip.wav                   → label PHYLUT (shallower than the depth, still labelled)
@@ -70,9 +70,8 @@ segments/                          # --label-depth 1
   the pattern can still be reviewed**; the interface simply displays less
   information about it.
 
-Collections named according to another convention can be described with
-`--filename-pattern`; see
-[Reading other naming conventions](#reading-other-naming-conventions).
+Collections named according to another convention can be described in the
+[reading settings](#reading-settings).
 
 ---
 
@@ -126,8 +125,8 @@ reviau
 # Open a local folder at start-up, with the interface on this machine
 reviau ~/segments
 
-# Portuguese interface, a fixed set of label buttons and an annotation table
-reviau ~/segments --lang pt-BR --labels "BOAALB, PHYLUT, chuva" --annotations
+# Portuguese interface, one label list shared by every folder, an annotation table
+reviau ~/segments --lang pt-BR --labels-file ~/classes.txt --annotations
 
 # Segments on a server, reviewed from another computer
 reviau ssh://user@fieldserver/data/segments
@@ -151,9 +150,9 @@ folder, the page displays only the folder box.
   path beginning with `~/`, or `ssh://user@host/path` for a remote folder, which
   is reached with the SSH settings of the command line (`--ssh-key`,
   `~/.ssh/config`, the SSH agent, and so on).
-- Every folder opened receives the options with which the command was started:
-  the filename pattern, `--label-depth`, `--output`, `--labels` and
-  `--annotations`.
+- Every folder opened receives the options with which the command was started,
+  such as `--output`, `--labels-file` and `--annotations`. How its names are
+  read is the folder's own setting; see [Reading settings](#reading-settings).
 - **Opening a folder does not write to it.** The verdict folders, the review log
   and the label list are created when the first segment is reviewed, so a folder
   opened by mistake, through a typing error or one level too high, is left
@@ -180,8 +179,9 @@ folder, the page displays only the folder box.
 | **✘ Incorrect** | The prediction is incorrect. The segment is saved with the selected labels, which describe what the clip actually contains, or, if none is selected, as containing no label from the list. The button shows which applies: *✘ Incorrect → TURDRU* or *✘ Incorrect · no label from the list*. |
 | **? Uncertain** | The clip cannot be assessed. It is filed under `uncertain/` and excluded from the correct and incorrect counts and from the annotation table. |
 | **← Previous / Next →** | Move between segments without recording a decision. |
-| **Type / Minimum (Hz) / Maximum (Hz) / Floor (dB)** | Redraw the spectrogram immediately, on a mel, linear or logarithmic frequency axis. The audio player is not affected, so playback continues while the view changes. |
+| **Type / Minimum (Hz) / Maximum (Hz) / Floor (dB)** | Redraw the spectrogram immediately, on a mel, linear or logarithmic frequency axis. The audio player is not affected, so playback continues while the view changes. The view is stored in the browser. |
 | **✎** | Edit the label list: each button displays a **×** that removes it, and the field below adds a new label. Changes are saved to the label list file (`labels.txt` in the segments folder by default). |
+| **⚙** | Open the [reading settings](#reading-settings) of the folder: filename pattern, date-time format, label source and label depth. |
 | **⟳** | Rescan the folder, for example after new segments have been added. |
 | **Language** | Switch the interface between English and Português. |
 | **◐ / ☀ / ☾** | Theme: system default, light or dark; each click selects the next. The selected theme is stored in the browser. The spectrogram keeps its colours in both themes. |
@@ -220,17 +220,15 @@ the file when the first segment is reviewed. From then on, the file is the list;
 it can be edited in the interface or by hand (blank lines and lines beginning
 with `#` are ignored).
 
-When `--labels` is given, those labels are the only buttons offered for the
-session. They replace the contents of the file and are written in its place.
-
 The list is never extended automatically: a rescan that finds a new folder does
 not add its name to the list. Removing labels from the list is also safe, since
 the label a clip carries is always shown as a button whether or not it is on the
 list, and a name typed into the field is both added to the list and selected for
 the segment on screen.
 
-`--labels-file` stores the list in another location, and `--no-labels-file`
-keeps changes for the current session only.
+`--labels-file` stores the list in another location. A relative path is resolved
+inside each segments folder; an absolute path, such as `~/classes.txt`, gives
+every folder opened the same list.
 
 ### Where a reviewed clip is filed
 
@@ -256,7 +254,7 @@ PONTO_A/BOAALB/clip.wav
   becomes `_chuva_forte`). The original name is kept in full before them. When no
   label is added (a plain Correct, or an Incorrect with no label from the list),
   and for every segment marked Uncertain, the name is left unchanged.
-- With `--label-depth`, the folders *below* the label are **not** recreated:
+- With a label depth above 0, the folders *below* the label are **not** recreated:
   `BOAALB/PONTO_A/20240115/clip.wav` corrected to TURDRU becomes
   `incorrect/BOAALB/clip_TURDRU.wav`, with one folder per predicted label
   containing the clips directly.
@@ -332,29 +330,49 @@ so reviews spread over several sessions accumulate in the same table.
 
 ---
 
-## Reading other naming conventions
+## Reading settings
+
+How the file names and folders of a collection are read is a property of the
+collection, so it is set per folder, from the **⚙** button next to the folder box,
+rather than on the command line. The settings are saved in **`reviau.json`** in
+the segments folder, so a folder reopens with its own settings on any machine
+and in any browser. As with the label list, the file is written only when
+settings are applied, never when a folder is merely opened.
+
+| Setting | Function |
+| --- | --- |
+| **Filename pattern** | How file names are read: the *default* pattern, the *vector search* preset, or a custom template or regular expression, described below |
+| **Date-time format** | The `strptime` format of the captured date and time (by default `%Y%m%d%H%M%S`) |
+| **Label source** | *Automatic* (the file name when the pattern captures a label, otherwise the folder), *Folder*, *File name* or *None* |
+| **Label depth** | The folder level that carries the label, counting down from the segments folder: 0 is the folder containing the clip, 1 the first folder below the segments folder |
+
+While the settings are edited, a **preview** shows how many of the pending names
+the pattern recognises and what it reads from the first few: label, site, date,
+window and score. Settings that cannot be used, such as a template with an
+unknown placeholder, are reported with the reason, and **Apply** remains
+unavailable until they are corrected. Applying the settings saves them and
+reopens the folder with them.
 
 Names that do not match the pattern can still be reviewed; the interface
 displays less information about them, and nothing that it cannot read reliably.
-To display the site, the time, the window and the score, `--filename-pattern`
-must describe how the names are built.
+When a folder is opened, a notice below the folder box reports any names that
+the pattern does not recognise.
 
 ### Writing a template
 
-The simpler form is to **write the name out, with its parts named in brackets**.
-Everything outside the brackets is matched literally.
+The simpler form of custom pattern is to **write the name out, with its parts
+named in brackets**. Everything outside the brackets is matched literally. For
+names such as `PONTO_A_20240115T053000_REC_12.0_17.0_BOAALB_0.873.wav`:
 
-```bash
-# PONTO_A_20240115T053000_REC_12.0_17.0_BOAALB_0.873.wav
-reviau ~/segments \
-    --filename-pattern '[site]_YYYYMMDDTHHMMSS_REC_[start_time]_[end_time]_[label]_[score]'
+```
+[site]_YYYYMMDDTHHMMSS_REC_[start_time]_[end_time]_[label]_[score]
 ```
 
 | In a template | Matches |
 | --- | --- |
 | `[site]`, `[label]` | free text, which may contain underscores |
 | `YYYYMMDD`, `HHMMSS` | the date and the time, written as shown or as `[date]` and `[time]` |
-| `[datetime]` | the date and time together, in any format, to be used with `--datetime-format` |
+| `[datetime]` | the date and time together, in any format, described by the date-time format |
 | `[start_time]`, `[end_time]` | the window of the clip within the recording, in seconds |
 | `[score]` | a similarity or confidence value |
 | `[extra]` | any remaining text, displayed in the interface as *Other* |
@@ -364,51 +382,40 @@ reviau ~/segments \
 Every placeholder is optional, but the template must match the **entire** name.
 A partial match would fill the interface with information read from the wrong
 parts of the name, so it is treated as no match. An unknown placeholder, such as
-the misspelling `[speceis]`, is rejected at start-up rather than ignored.
+the misspelling `[speceis]`, is rejected rather than ignored.
 
 ### Writing a regular expression
 
-For names that no template can describe, `--filename-pattern` also accepts **any
+For names that no template can describe, the custom pattern also accepts **any
 regular expression with named groups**: `site`, `date`, `time`, `datetime`,
 `start`, `end`, `label`, `score` and `extra`. All of them are optional, and the
-expression is matched against the name without its extension:
+expression is matched against the name without its extension. For names such as
+`BOAALB-siteA-202401150530.wav`, with the label first and a 12-digit timestamp:
 
-```bash
-# label first, then site, then a 12-digit timestamp: BOAALB-siteA-202401150530.wav
-reviau ~/segments \
-    --filename-pattern '^(?P<label>[A-Z]+)-(?P<site>\w+)-(?P<datetime>\d{12})$' \
-    --datetime-format '%Y%m%d%H%M'
 ```
+^(?P<label>[A-Z]+)-(?P<site>\w+)-(?P<datetime>\d{12})$
+```
+
+with the date-time format `%Y%m%d%H%M`.
 
 ### Source of the label
 
-`--label-from` selects the source: `folder` (the default), `filename` (the
-`label` group of the pattern) or `none`. A pattern that captures a `label` group
-selects `filename` automatically unless `--label-from` states otherwise. In that
-mode the clip is filed directly under its outcome and its predicted label, for
-example `incorrect/BOAALB/clip_TURDRU.wav`.
+With the *Automatic* source, a pattern that captures a `label` group reads the
+label from the file name, and any other pattern reads it from the folder. When
+the label is read from the file name, the clip is filed directly under its
+outcome and its predicted label, for example `incorrect/BOAALB/clip_TURDRU.wav`.
 
-To keep the folders instead, the folder source must be requested explicitly. For
-segments organised as `[label]/[site]_YYYYMMDD/clip.wav`, the following command
-reads the label from the top folder, keeps the site folder below it, and still
-reads the site, times and score from the name:
-
-```bash
-reviau ~/segments \
-    --filename-pattern '[site]_YYYYMMDDTHHMMSS_REC_[start_time]_[end_time]_[label]_[score]' \
-    --label-from folder --label-depth 1
-```
+To keep the folders instead, the *Folder* source must be selected explicitly. For
+segments organised as `[label]/[site]_YYYYMMDD/clip.wav`, the *Folder* source
+with label depth 1 reads the label from the top folder and keeps the site folder
+below it, while the site, times and score are still read from the name.
 
 ### The vector-search preset
 
-`--filename-pattern vector-search` reads names of the form
+The *vector search* preset reads names of the form
 `SITE_YYYYMMDD_HHMMSS_START-ENDs_SCORE_LABEL.wav`, as written by the bioacoustic
 vector-search notebooks, with the **label and the similarity score in the
-name**:
-
-```bash
-reviau ~/vector_search_segments --filename-pattern vector-search --annotations
-```
+name**.
 
 Because the label is part of the name, clips are filed directly under their
 outcome and predicted label (`correct/BOAALB/`, `incorrect/BOAALB/`), and the
@@ -432,9 +439,12 @@ reviau fieldserver:/data/segments          # scp-style address
 reviau ssh://fieldserver/data/segments --ssh-key ~/.ssh/id_field
 ```
 
-Host aliases, users, ports and identity files from `~/.ssh/config` are applied,
-and an SSH agent is used when one is running. An unknown host key is rejected
-unless `--accept-new-host-key` is given.
+The user and port are given in the address (`ssh://user@host:port/path`) or
+taken from `~/.ssh/config`, together with host aliases and identity files, and an
+SSH agent is used when one is running. Where neither a key nor an agent can be
+used, a password is read from the `REVIAU_SSH_PASSWORD` environment variable; it
+is never accepted on the command line, where it would be recorded in the shell
+history. An unknown host key is rejected unless `--accept-new-host-key` is given.
 
 Nothing is written outside the segments folder and the output folder, and no
 clip is ever deleted: files are only moved within those folders.
@@ -486,33 +496,14 @@ reviau [SEGMENTS] [OPTIONS]
                                 can be opened, and changed, in the browser
 
   -l, --lang TEXT               Interface language at start-up: en, pt-BR  [default: en]
-      --labels TEXT             The only labels offered, separated by commas.
-                                Replaces a stored list
-      --labels-file TEXT        Location of the label list, one label per line
+      --labels-file TEXT        Location of the label list, one label per line.
+                                Relative paths are inside each segments folder; an
+                                absolute path shares one list between folders
                                 [default: <SEGMENTS>/labels.txt]
-      --no-labels-file          Do not read or write the list; changes last for the session
-      --label-from TEXT         Source of the label: folder, filename or none
-                                [default: folder]
-      --label-depth INTEGER     Folder level that carries the label, counting down
-                                from SEGMENTS: 1 for LABEL/SITE/clip.wav; 0 is the
-                                folder containing the clip  [default: 0]
-      --filename-pattern TEXT   'default', 'vector-search', a template such as
-                                '[site]_YYYYMMDD_HHMMSS_[label]_[score]', or a regular
-                                expression with the named groups site, date, time,
-                                datetime, start, end, label, score, extra
-                                [default: default]
-      --datetime-format TEXT    strptime format of the captured date and time
-                                [default: %Y%m%d%H%M%S]
       --no-multi-label          Restrict each segment to one label (several labels
                                 per segment are allowed by default)
       --annotations             Also write the annotation table of confirmed labels
       --annotations-path TEXT   Location of the table  [default: <output>/annotations.csv]
-
-      --spec-type [mel|fft|log] Initial frequency axis: mel scale, linear Hz or
-                                logarithmic Hz  [default: mel]
-      --fmin INTEGER            Initial minimum frequency, in Hz  [default: 0]
-      --fmax INTEGER            Initial maximum frequency, in Hz; 0 = Nyquist  [default: 0]
-      --db-floor INTEGER        Initial lower limit of the colour scale, in dB  [default: -80]
 
   -o, --output TEXT             Folder to which the reviewed segments and
                                 reviews.csv are written  [default: the segments folder]
@@ -523,14 +514,20 @@ reviau [SEGMENTS] [OPTIONS]
       --no-auth                 Serve the interface without an access token
       --open / --no-open        Open a browser at start-up  [default: open]
 
-      --ssh-user / --ssh-port / --ssh-key / --ssh-password
+      --ssh-key TEXT            Private key file for SSH connections
       --known-hosts TEXT        Additional known_hosts file to trust
       --accept-new-host-key     Accept an unknown SSH host key
       --cache-dir TEXT          Location of the local cache of remote clips
                                 [default: a temporary folder]
 
       --version                 Show the version and exit
+
+  Environment: REVIAU_SSH_PASSWORD  SSH password, where keys or an agent cannot be used
 ```
+
+The filename pattern, the date-time format, the label source and the label depth
+are set per folder in the [reading settings](#reading-settings), and the
+spectrogram view is set in the interface and stored in the browser.
 
 ### Verdict folders and language
 

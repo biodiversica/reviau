@@ -4,7 +4,7 @@ from typer.main import get_command
 from typer.testing import CliRunner
 
 from reviau import __version__
-from reviau.cli import _is_loopback, _pattern_has_label, cli
+from reviau.cli import _is_loopback, cli
 
 runner = CliRunner()
 
@@ -48,17 +48,29 @@ def test_the_documented_options_are_all_accepted():
     """Checked against the command, not its rendering, which rich reflows and
     truncates depending on the terminal it believes it is writing to."""
     names = declared_options()
-    for flag in ("--lang", "--labels", "--label-from", "--label-depth",
-                 "--filename-pattern",
-                 "--datetime-format", "--multi-label", "--no-multi-label",
-                 "--labels-file", "--no-labels-file", "--annotations",
-                 "--annotations-path", "--spec-type", "--fmin", "--fmax",
-                 "--db-floor", "--output",
-                 "--host", "--port", "--token", "--no-auth", "--open", "--no-open",
-                 "--ssh-user", "--ssh-port", "--ssh-key", "--ssh-password",
-                 "--known-hosts", "--accept-new-host-key", "--cache-dir",
-                 "--version"):
+    for flag in ("--lang", "--multi-label", "--no-multi-label", "--labels-file",
+                 "--annotations", "--annotations-path", "--output", "--host",
+                 "--port", "--token", "--no-auth", "--open", "--no-open",
+                 "--ssh-key", "--known-hosts", "--accept-new-host-key",
+                 "--cache-dir", "--version"):
         assert flag in names, flag
+
+
+REMOVED = ("--filename-pattern", "--datetime-format", "--label-from", "--label-depth",
+           "--spec-type", "--fmin", "--fmax", "--db-floor", "--labels",
+           "--no-labels-file", "--ssh-user", "--ssh-port", "--ssh-password")
+
+
+def test_options_moved_to_the_gui_or_dropped_are_gone():
+    """Reading settings are per folder in the GUI now; the spectrogram view is
+    the browser's; the rest duplicated the address or misbehaved."""
+    names = declared_options()
+    assert not [flag for flag in REMOVED if flag in names]
+
+
+def test_a_removed_option_is_refused(tmp_path):
+    result = runner.invoke(cli, [str(tmp_path), "--label-depth", "1"])
+    assert result.exit_code != 0
 
 
 def test_missing_folder_exits_with_an_error(tmp_path):
@@ -66,58 +78,9 @@ def test_missing_folder_exits_with_an_error(tmp_path):
     assert result.exit_code == 2
 
 
-def test_bad_spec_type_is_rejected(tmp_path):
-    result = runner.invoke(cli, [str(tmp_path), "--spec-type", "wavelet"])
-    assert result.exit_code != 0
-
-
 def test_loopback_detection():
     assert _is_loopback("127.0.0.1") and _is_loopback("localhost") and _is_loopback("::1")
     assert not _is_loopback("0.0.0.0") and not _is_loopback("100.64.0.5")
-
-
-def test_bad_label_source_is_rejected(tmp_path):
-    result = runner.invoke(cli, [str(tmp_path), "--label-from", "telepathy"])
-    assert result.exit_code != 0
-
-
-def test_bad_filename_pattern_is_rejected(tmp_path):
-    result = runner.invoke(cli, [str(tmp_path), "--filename-pattern", "(unclosed"])
-    assert result.exit_code != 0
-
-
-def test_pattern_presets_say_whether_they_carry_a_label():
-    # The default pattern reads no label, so the folder is used; the
-    # vector-search preset does, so --label-from defaults to the file name.
-    assert _pattern_has_label("default") is False
-    assert _pattern_has_label("vector-search") is True
-    assert _pattern_has_label(r"^(?P<label>\w+)_(?P<site>\w+)$") is True
-    assert _pattern_has_label(r"^(?P<site>\w+)$") is False
-    # A template says the same thing, without an expression being written out.
-    assert _pattern_has_label("[site]_YYYYMMDD_HHMMSS_[label]_[score]") is True
-    assert _pattern_has_label("[site]_YYYYMMDD_HHMMSS_[extra]") is False
-
-
-def test_a_template_with_a_bad_placeholder_is_refused(tmp_path):
-    result = runner.invoke(cli, [str(tmp_path), "--filename-pattern", "[site]_[speceis]"])
-    assert result.exit_code != 0
-    assert "speceis" in plain(result.output)
-
-
-def test_a_template_gets_past_validation(tmp_path):
-    result = runner.invoke(
-        cli,
-        [str(tmp_path / "nope"), "--filename-pattern",
-         "[site]_YYYYMMDDTHHMMSS_REC_[start_time]_[end_time]_[label]_[score]"],
-    )
-    assert result.exit_code == 2      # the missing folder, not the pattern
-
-
-def test_every_spectrogram_type_is_accepted(tmp_path):
-    for spec_type in ("mel", "fft", "log"):
-        result = runner.invoke(cli, [str(tmp_path / "nope"), "--spec-type", spec_type])
-        # It gets past validation and fails on the missing folder instead.
-        assert result.exit_code == 2, spec_type
 
 
 def test_the_segments_folder_is_optional():

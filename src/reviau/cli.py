@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import ipaddress
 import os
-import re
 import secrets
 import socket
 import sys
@@ -17,16 +16,8 @@ import uvicorn
 
 from . import __version__, i18n
 from .config import DEFAULT_LABELS_FILE, ReviewConfig
-from .naming import (
-    DEFAULT_DATETIME_FORMAT,
-    LABEL_SOURCES,
-    PRESETS,
-    TEMPLATE_FIELDS,
-    expressions,
-)
 from .review import ReviewSession
 from .server import create_app
-from .spectrogram import SPEC_TYPES
 from .storage import open_backend
 from .workspace import OpenError, Workspace
 
@@ -39,8 +30,11 @@ cli = typer.Typer(
         "correct or incorrect follows from that, and every review is logged to "
         "reviews.csv.\n\n"
         "By default a segment's label is the folder it sits in, and its file name "
-        "is read as [site]_[YYYYMMDD]_[HHMMSS]_[start]_[end]_* — both are "
-        "configurable with --label-from and --filename-pattern.\n\n"
+        "is read as [site]_[YYYYMMDD]_[HHMMSS]_[start]_[end]_*. How each folder's "
+        "names are read is set in the browser, under Reading settings, and kept "
+        "in that folder's reviau.json.\n\n"
+        "An SSH password, where keys or an agent cannot be used, is read from "
+        "the REVIAU_SSH_PASSWORD environment variable.\n\n"
         "SEGMENTS may be a local folder or a remote one over SSH, and may be left "
         "out: the folder can be opened — and changed — from the browser.\n"
         "  reviau\n"
@@ -56,21 +50,6 @@ def _version_callback(value: bool) -> None:
     if value:
         typer.echo(f"reviau {__version__}")
         raise typer.Exit()
-
-
-def _pattern_has_label(pattern: str) -> bool:
-    """True when the filename pattern captures a ``label`` group."""
-    try:
-        exprs = expressions(pattern)
-    except ValueError:
-        return False
-    for expr in exprs:
-        try:
-            if "label" in re.compile(expr).groupindex:
-                return True
-        except re.error:
-            return False
-    return False
 
 
 def _is_loopback(host: str) -> bool:
@@ -110,9 +89,6 @@ def _pattern_note(session: ReviewSession, t) -> str:
 
 
 def _summary(session: ReviewSession | None, config: ReviewConfig, t) -> str:
-    freq = f"{config.freq_min_hz} – " + (
-        "Nyquist" if config.freq_max_hz == 0 else f"{config.freq_max_hz} Hz"
-    )
     if session is None:
         folder_rows = [(t("cli.folder"), t("cli.folder_none"))]
     else:
@@ -122,8 +98,8 @@ def _summary(session: ReviewSession | None, config: ReviewConfig, t) -> str:
             (t("cli.output"), session.output_root),
             (t("cli.pending"), str(counts["pending"])),
             (t("cli.already_correct"), str(counts["correct"])),
-            (t("cli.already_wrong"), str(counts["incorrect"])),
-            (t("cli.already_unsure"), str(counts["uncertain"])),
+            (t("cli.already_incorrect"), str(counts["incorrect"])),
+            (t("cli.already_uncertain"), str(counts["uncertain"])),
             *([(t("cli.already_labelled"), str(counts["labelled"]))]
               if counts["labelled"] else []),
             (t("cli.review_log"), session.log.path),
@@ -134,11 +110,16 @@ def _summary(session: ReviewSession | None, config: ReviewConfig, t) -> str:
         annotations = t("cli.on")
     else:
         annotations = t("cli.off")
+    # How names are read is the open folder's own setting, from its reviau.json.
+    reading = [] if session is None else [
+        (t("cli.label_from"), session.config.reading.resolved_label_from),
+        *([(t("cli.label_depth"), str(session.config.label_depth))]
+          if session.config.label_depth else []),
+        (t("cli.pattern"), session.config.filename_pattern),
+    ]
     rows = [
         *folder_rows,
-        (t("cli.label_from"), config.label_from),
-        *([(t("cli.label_depth"), str(config.label_depth))] if config.label_depth else []),
-        (t("cli.pattern"), config.filename_pattern),
+        *reading,
         *([] if session is None else [
             (t("cli.pattern_match"), "{} / {}".format(*session.pattern_report()[:2])),
             (t("cli.labels"), ", ".join(session.label_choices()) or t("cli.labels_none")),
@@ -147,9 +128,6 @@ def _summary(session: ReviewSession | None, config: ReviewConfig, t) -> str:
         ]),
         (t("cli.multi"), t("cli.on") if config.multi_label else t("cli.off")),
         (t("cli.annotations"), annotations),
-        (t("cli.spec_type"), config.spec_type),
-        (t("cli.freq_range"), freq),
-        (t("cli.db_floor"), f"{config.db_min} dB"),
     ]
     width = max(len(name) for name, _ in rows)
     return "\n".join(f"{name.ljust(width)} : {value}" for name, value in rows)
@@ -161,42 +139,12 @@ def review(
         None,
         metavar="[SEGMENTS]",
         help="Segments folder to open at start: a local path, or "
-             "ssh://[user@]host[:port]/path. Leave it out to open one from the browser.",
+             "ssh://user@host:port/path (user and port optional). "
+             "Leave it out to open one from the browser.",
     ),
     lang: str = typer.Option(
         "en", "--lang", "-l",
         help=f"Interface language at start: {', '.join(i18n.available())}.",
-    ),
-    labels: str = typer.Option(
-        "", "--labels",
-        help="The only labels offered as buttons, comma-separated "
-             "(e.g. 'BOAALB, PHYLUT, rain'); a stored list is replaced by them. "
-             "Left blank, the stored list is used, or the labels the pending "
-             "segments already carry when there is none yet.",
-    ),
-    label_from: Optional[str] = typer.Option(
-        None, "--label-from",
-        help="Where a segment's label is read from: 'folder' (the folder it sits in), "
-             "'filename' (captured by --filename-pattern) or 'none'.  [default: folder]",
-    ),
-    label_depth: int = typer.Option(
-        0, "--label-depth", min=0,
-        help="Which folder carries the label, counting down from the segments folder: "
-             "1 for LABEL/SITE/clip.wav, 2 for the level below that. The default 0 is "
-             "the folder the clip sits in, as in SITE/LABEL/clip.wav.",
-    ),
-    filename_pattern: str = typer.Option(
-        "default", "--filename-pattern",
-        help="How file names are read: a preset ('default' for "
-             "[site]_YYYYMMDD_HHMMSS_[start]_[end]_*, 'vector-search' for names that also "
-             "carry a score and label), a template naming the parts in brackets — e.g. "
-             "'[site]_YYYYMMDDTHHMMSS_REC_[start]_[end]_[label]_[score]', where * matches "
-             "anything and everything outside the brackets is literal — or a regular "
-             f"expression using the named groups {', '.join(TEMPLATE_FIELDS)}.",
-    ),
-    datetime_format: str = typer.Option(
-        DEFAULT_DATETIME_FORMAT, "--datetime-format",
-        help="strptime format for the date and time captured from a file name.",
     ),
     multi_label: bool = typer.Option(
         True, "--multi-label/--no-multi-label",
@@ -206,11 +154,8 @@ def review(
     labels_file: Optional[str] = typer.Option(
         None, "--labels-file",
         help="Where the editable label list is kept, one label per line. Relative "
-             "paths are inside the segments folder.  [default: <SEGMENTS>/labels.txt]",
-    ),
-    no_labels_file: bool = typer.Option(
-        False, "--no-labels-file",
-        help="Do not read or write a label list file; edits last for this session only.",
+             "paths are inside each segments folder; an absolute path shares one "
+             "list between folders.  [default: <SEGMENTS>/labels.txt]",
     ),
     annotations: bool = typer.Option(
         False, "--annotations/--no-annotations",
@@ -222,14 +167,6 @@ def review(
         help="Where that table lives. Relative paths are inside the segments folder. "
              "[default: <output>/annotations.csv]",
     ),
-    spec_type: str = typer.Option(
-        "mel", "--spec-type",
-        help="Initial spectrogram type: 'mel' (mel scale), 'fft' (linear Hz) or "
-             "'log' (logarithmic Hz).",
-    ),
-    fmin: int = typer.Option(0, "--fmin", min=0, max=96000, help="Initial minimum frequency, in Hz."),
-    fmax: int = typer.Option(0, "--fmax", min=0, max=96000, help="Initial maximum frequency in Hz; 0 = Nyquist."),
-    db_floor: int = typer.Option(-80, "--db-floor", min=-120, max=-20, help="Initial dB floor of the colour scale."),
     output: str = typer.Option(
         "", "--output", "-o",
         help="Where the reviewed segments are written: the folder holding "
@@ -250,14 +187,7 @@ def review(
     open_browser: bool = typer.Option(
         True, "--open/--no-open", help="Open the GUI in a browser on start."
     ),
-    ssh_user: Optional[str] = typer.Option(None, "--ssh-user", help="SSH user, when not in the URL."),
-    ssh_port: Optional[int] = typer.Option(None, "--ssh-port", help="SSH port, when not in the URL."),
     ssh_key: Optional[str] = typer.Option(None, "--ssh-key", help="Private key file for the SSH connection."),
-    ssh_password: Optional[str] = typer.Option(
-        None, "--ssh-password",
-        envvar="REVIAU_SSH_PASSWORD",
-        help="SSH password. Prefer keys or an agent; reads $REVIAU_SSH_PASSWORD.",
-    ),
     known_hosts: Optional[str] = typer.Option(
         None, "--known-hosts", help="Extra known_hosts file to trust."
     ),
@@ -274,27 +204,6 @@ def review(
     ),
 ) -> None:
     """Open SEGMENTS in the browser reviewer."""
-    if spec_type not in SPEC_TYPES:
-        raise typer.BadParameter(
-            f"must be one of {', '.join(SPEC_TYPES)}", param_hint="--spec-type"
-        )
-    if label_from is not None and label_from not in LABEL_SOURCES:
-        raise typer.BadParameter(
-            f"must be one of {', '.join(LABEL_SOURCES)}", param_hint="--label-from"
-        )
-    if filename_pattern not in PRESETS:
-        try:
-            for expr in expressions(filename_pattern):
-                re.compile(expr)
-        except ValueError as exc:      # a template with a typo in it
-            raise typer.BadParameter(str(exc), param_hint="--filename-pattern") from exc
-        except re.error as exc:
-            raise typer.BadParameter(f"not a valid regular expression: {exc}",
-                                     param_hint="--filename-pattern") from exc
-    # A pattern that puts the label in the file name implies reading it from
-    # there, unless --label-from says otherwise.
-    if label_from is None:
-        label_from = "filename" if _pattern_has_label(filename_pattern) else "folder"
     language = i18n.normalize(lang)
     if language != lang:
         typer.secho(
@@ -307,30 +216,21 @@ def review(
     config = ReviewConfig(
         segments=segments or "",
         lang=language,
-        labels=[x.strip() for x in labels.split(",") if x.strip()],
-        labels_file="" if no_labels_file else (labels_file or DEFAULT_LABELS_FILE),
-        persist_labels=not no_labels_file,
-        label_from=label_from,
-        label_depth=label_depth,
-        filename_pattern=filename_pattern,
-        datetime_format=datetime_format,
+        labels_file=labels_file or DEFAULT_LABELS_FILE,
         multi_label=multi_label,
         save_annotations=annotations,
         annotations_path=annotations_path,
         output=output,
-        spec_type=spec_type,
-        freq_min_hz=fmin,
-        freq_max_hz=fmax,
-        db_min=db_floor,
     )
+    # A password on the command line would land in the shell history and the
+    # process list; it is only ever taken from the environment.
+    ssh_password = os.environ.get("REVIAU_SSH_PASSWORD") or None
 
     def opener(spec: str):
         # Every folder opened — here or later from the browser — connects with
         # the SSH settings the command line was started with.
         return open_backend(
             spec,
-            ssh_user=ssh_user,
-            ssh_port=ssh_port,
             ssh_key=ssh_key,
             ssh_password=ssh_password,
             known_hosts=known_hosts,

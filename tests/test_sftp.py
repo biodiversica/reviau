@@ -92,3 +92,25 @@ def test_rescan_picks_up_a_clip_added_remotely(remote):
     assert session.counts()["pending"] == 4
     assert "XXX" in session.discovered_labels()
     assert session.labels.add("XXX")[-1] == "XXX"
+
+
+def test_the_temporary_clip_cache_is_removed_on_close(segments_dir):
+    """Each clip listened to is copied into it; it must not outlive the session."""
+    with SFTPTestServer(str(segments_dir)) as server:
+        backend = open_backend(f"ssh://tester@127.0.0.1:{server.port}/", ssh_password="x",
+                               accept_new_host_key=True, use_ssh_config=False)
+        cached = backend.fetch(backend.walk_wavs(backend.root)[0])
+        assert cached.exists()
+        backend.close()
+        assert not cached.parent.exists()
+
+
+def test_a_cache_folder_named_by_the_reviewer_is_kept(segments_dir, tmp_path):
+    cache = tmp_path / "my-cache"
+    with SFTPTestServer(str(segments_dir)) as server:
+        backend = open_backend(f"ssh://tester@127.0.0.1:{server.port}/", ssh_password="x",
+                               accept_new_host_key=True, use_ssh_config=False,
+                               cache_dir=str(cache))
+        cached = backend.fetch(backend.walk_wavs(backend.root)[0])
+        backend.close()
+        assert cached.exists()

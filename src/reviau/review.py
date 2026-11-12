@@ -9,8 +9,9 @@ from pathlib import Path
 from .annotations import AnnotationTable, Review, ReviewLog, SourceManifest, segment_bounds
 from .config import REVIEW_LOG, ReviewConfig
 from .labels import LabelStore
-from .naming import SegmentParser, nfc, slug, split_labels, with_labels
+from .naming import nfc, slug, split_labels, with_labels
 from .outcome import OUTCOMES, Outcome, decide
+from .reading import parser_for
 from .spectrogram import SpectrogramError, duration_seconds, render
 from .storage import Backend
 
@@ -56,12 +57,7 @@ class ReviewSession:
         self.output_root = (
             backend.resolve(config.output) if str(config.output).strip() else backend.root
         )
-        self.parser = SegmentParser(
-            pattern=config.filename_pattern,
-            label_from=config.label_from,
-            datetime_format=config.datetime_format,
-            label_depth=config.label_depth,
-        )
+        self.parser = parser_for(config.reading)
         self._lock = threading.RLock()
         # Nothing is written on opening — no verdict folders, no label list:
         # they are made with the first segment filed, so a folder opened by
@@ -81,9 +77,7 @@ class ReviewSession:
         self.labels = LabelStore(
             backend,
             backend.resolve(config.labels_file) if config.labels_file else "",
-            configured=config.labels,
             discovered=self.discovered_labels(),
-            persist=config.persist_labels,
         )
 
     # ── setup ────────────────────────────────────────────────────────────────

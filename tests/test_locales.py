@@ -34,3 +34,20 @@ def test_placeholders_match_between_languages():
         if key.startswith("meta."):
             continue
         assert set(holes.findall(en[key])) == set(holes.findall(pt[key])), key
+
+
+SRC = Path(__file__).resolve().parents[1] / "src" / "reviau"
+
+
+def test_every_string_the_code_asks_for_exists():
+    """A renamed key left behind shows its raw name on screen instead of text."""
+    keys = set(load("en.json"))
+    asked = set()
+    for py in SRC.rglob("*.py"):
+        asked |= set(re.findall(r"""\bt\(\s*["']([\w.]+)["']""", py.read_text(encoding="utf-8")))
+    for js in (SRC / "web").glob("*.js"):
+        asked |= set(re.findall(r"""\bt\(\s*'([\w.]+)'""", js.read_text(encoding="utf-8")))
+    html = (SRC / "web" / "index.html").read_text(encoding="utf-8")
+    asked |= set(re.findall(r'data-i18n(?:-title|-ph)?="([\w.]+)"', html))
+    assert asked, "found no keys at all"
+    assert sorted(asked - keys) == []

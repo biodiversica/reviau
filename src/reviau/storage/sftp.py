@@ -7,6 +7,7 @@ import hashlib
 import os
 import posixpath
 import re
+import shutil
 import stat
 import tempfile
 import threading
@@ -177,6 +178,12 @@ class SFTPBackend(Backend):
         self._connect()
 
     def close(self) -> None:
+        """Drop the connection, and the clip cache when it is a temporary one.
+
+        A cache folder the reviewer named with ``--cache-dir`` is kept, so it can
+        be reused by the next run; the default temporary folder holds a copy of
+        every clip listened to and would otherwise outlive the session.
+        """
         with self._lock:
             for obj in (self._sftp, self._client):
                 try:
@@ -185,6 +192,9 @@ class SFTPBackend(Backend):
                 except Exception:
                     pass
             self._sftp = self._client = None
+            if self._owns_cache:
+                shutil.rmtree(self._cache, ignore_errors=True)
+                self._owns_cache = False
 
     # ── path helpers ─────────────────────────────────────────────────────────
     def join(self, *parts: str) -> str:

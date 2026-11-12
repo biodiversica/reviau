@@ -37,6 +37,7 @@
            spellcheck="false" data-i18n-ph="folder.placeholder" data-i18n-title="folder.hint">
     <datalist id="recent-folders"></datalist>
     <button type="button" id="btn-browse" class="btn small" data-i18n="folder.browse">Browse…</button>
+    <button type="button" id="btn-reading" class="btn small" data-i18n-title="reading.button" disabled>⚙</button>
     <button type="submit" id="btn-open" class="btn small ok" data-i18n="folder.open">Open</button>
   </form>
 
@@ -114,6 +115,46 @@
       <span id="browse-wavs" class="hint"></span>
       <button type="button" id="browse-cancel" class="btn small" data-i18n="browse.cancel">Cancel</button>
       <button type="button" id="browse-open" class="btn small ok" data-i18n="browse.open_here">Open this folder</button>
+    </div>
+  </dialog>
+
+  <dialog id="reading-dialog" class="reading">
+    <h2 data-i18n="reading.title">Reading settings</h2>
+    <p class="hint" data-i18n="reading.intro"></p>
+    <div class="reading-grid">
+      <label for="rd-preset" data-i18n="reading.pattern">Filename pattern</label>
+      <div>
+        <select id="rd-preset">
+          <option value="default" data-i18n="reading.preset_default"></option>
+          <option value="vector-search" data-i18n="reading.preset_vector"></option>
+          <option value="custom" data-i18n="reading.preset_custom"></option>
+        </select>
+        <input id="rd-pattern" type="text" class="reading-text" spellcheck="false"
+               data-i18n-ph="reading.custom_placeholder">
+      </div>
+      <label for="rd-datetime" data-i18n="reading.datetime">Date-time format</label>
+      <input id="rd-datetime" type="text" class="reading-text" spellcheck="false">
+      <label for="rd-label-from" data-i18n="reading.label_from">Label source</label>
+      <select id="rd-label-from">
+        <option value="auto" data-i18n="reading.from_auto"></option>
+        <option value="folder" data-i18n="reading.from_folder"></option>
+        <option value="filename" data-i18n="reading.from_filename"></option>
+        <option value="none" data-i18n="reading.from_none"></option>
+      </select>
+      <label for="rd-depth" data-i18n="reading.depth">Label depth</label>
+      <div>
+        <input id="rd-depth" type="number" min="0" step="1" class="reading-depth">
+        <span class="hint" data-i18n="reading.depth_hint"></span>
+      </div>
+    </div>
+    <h3 data-i18n="reading.preview">Preview</h3>
+    <div id="rd-summary" class="reading-summary"></div>
+    <div class="reading-table-wrap"><table id="rd-samples" class="reading-table"></table></div>
+    <div id="rd-error" class="error"></div>
+    <div class="browse-actions">
+      <span id="rd-note" class="hint"></span>
+      <button type="button" id="rd-cancel" class="btn small" data-i18n="browse.cancel">Cancel</button>
+      <button type="button" id="rd-apply" class="btn small ok" data-i18n="reading.apply">Apply</button>
     </div>
   </dialog>
 

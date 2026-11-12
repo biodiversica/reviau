@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from .naming import DEFAULT_DATETIME_FORMAT
+from .reading import Reading
 
 #: Optional manifest mapping each clip to the recording it was cut from. When a
 #: collection carries one, the annotation table can name that recording.
@@ -25,20 +26,22 @@ DEFAULT_LABELS_FILE = "labels.txt"
 
 @dataclass
 class ReviewConfig:
-    """Settings the reviewer starts with.
+    """Settings a review session runs with.
 
-    The spectrogram fields are only the *initial* values shown in the browser;
-    they can be changed live without restarting. The rest is fixed for the run —
-    the verdict folders are named after the outcomes and never translated, so
-    a review split over sessions in two languages files its clips in one place.
+    Most come from the command line and apply to every folder opened. The four
+    reading fields describe one collection instead: they are filled in per
+    folder from its ``reviau.json`` (see :mod:`reviau.reading`), and changed
+    from the GUI. The verdict folders are named after the outcomes and never
+    translated, so a review split over sessions in two languages files its
+    clips in one place.
     """
 
     segments: str = "."
     lang: str = "en"
-    labels: list[str] = field(default_factory=list)
 
-    # How a segment's metadata is read
-    label_from: str = "folder"
+    # How a segment's metadata is read — per folder, see reviau.reading.
+    #: "auto" reads the label from the file name when the pattern captures one.
+    label_from: str = "auto"
     #: Which folder carries the label, counting down from the segments root.
     #: 0 is the folder the clip sits in; 1 the first folder under the root, for
     #: collections that keep the class on top and sites inside it.
@@ -50,18 +53,17 @@ class ReviewConfig:
     save_annotations: bool = False
     annotations_path: str = ""
 
-    # The editable label list
+    #: The editable label list. Empty keeps the list for the session only.
     labels_file: str = DEFAULT_LABELS_FILE
-    persist_labels: bool = True
-
-    # Spectrogram defaults
-    spec_type: str = "mel"
-    freq_min_hz: int = 0
-    freq_max_hz: int = 0  # 0 → Nyquist
-    db_min: int = -80
 
     #: Folder the verdict folders and the review log are created in. Empty
     #: means the segments folder itself; a relative path is read against it, an
     #: absolute one is taken as given, so a review can write anywhere the
     #: reviewer can reach.
     output: str = ""
+
+    @property
+    def reading(self) -> Reading:
+        """The reading fields, as the :class:`~reviau.reading.Reading` they form."""
+        return Reading(self.filename_pattern, self.datetime_format,
+                       self.label_from, self.label_depth)

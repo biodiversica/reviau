@@ -47,9 +47,14 @@ def test_label_choices_are_the_folder_names(session):
     assert session.label_choices() == ["BOAALB", "PHYLUT"]
 
 
-def test_configured_labels_are_the_only_ones_offered(segments_dir):
-    session = make_session(segments_dir, labels=["rain", "BOAALB"])
-    assert session.label_choices() == ["rain", "BOAALB"]
+def test_a_shared_list_file_gives_every_folder_the_same_labels(segments_dir, tmp_path):
+    """One fixed list for several collections: --labels-file with an absolute path."""
+    shared = tmp_path / "classes.txt"
+    shared.write_text("rain\nBOAALB\n", encoding="utf-8")
+    other = tmp_path / "other"
+    write_wav(other / "PHYLUT" / "S_20240101_000000_0.0_5.0.wav")
+    for folder in (segments_dir, other):
+        assert make_session(folder, labels_file=str(shared)).label_choices() == ["rain", "BOAALB"]
 
 
 def test_site_subfolders_are_not_offered_as_labels(label_on_top_dir):
@@ -511,13 +516,17 @@ def test_a_stored_list_wins_over_what_the_collection_uses(segments_dir):
     assert session.label_choices() == ["rain", "TURDRU"]
 
 
-def test_labels_named_on_the_command_line_replace_a_stored_list(segments_dir):
-    (segments_dir / "labels.txt").write_text("rain\n", encoding="utf-8")
-    session = make_session(segments_dir, labels=["chuva"])
-    assert session.label_choices() == ["chuva"]
-    assert (segments_dir / "labels.txt").read_text().split() == ["rain"]
+def test_reviewing_one_folder_never_rewrites_another_folders_list(segments_dir, tmp_path):
+    """The bug --labels had once folders could be switched: every folder opened
+    in the session had its own labels.txt replaced by the command-line list."""
+    other = tmp_path / "other"
+    write_wav(other / "PHYLUT" / "S_20240101_000000_0.0_5.0.wav")
+    (other / "labels.txt").write_text("PHYLUT\nTURDRU\nrain\n", encoding="utf-8")
+    accept(make_session(segments_dir))
+    session = make_session(other)
+    assert session.label_choices() == ["PHYLUT", "TURDRU", "rain"]
     accept(session)
-    assert (segments_dir / "labels.txt").read_text().split() == ["chuva"]
+    assert (other / "labels.txt").read_text().split() == ["PHYLUT", "TURDRU", "rain"]
 
 
 def test_comments_and_blank_lines_are_ignored(segments_dir):
@@ -549,7 +558,7 @@ def test_a_removed_label_still_works_when_a_clip_carries_it(segments_dir):
 
 
 def test_persistence_can_be_switched_off(segments_dir):
-    session = make_session(segments_dir, persist_labels=False, labels_file="")
+    session = make_session(segments_dir, labels_file="")
     session.labels.add("TURDRU")
     assert "TURDRU" in session.label_choices()
     assert not (segments_dir / "labels.txt").exists()

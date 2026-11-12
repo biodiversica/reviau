@@ -203,3 +203,24 @@ def test_the_theme_button_cycles_system_light_dark():
     """)
     assert out == {"order": ["light", "dark", "system"], "junk": "system",
                    "missing": "system", "fromJunk": "light", "glyphs": ["◐", "☀", "☾"]}
+
+
+@node
+def test_the_pattern_menu_and_the_settings_it_sends():
+    out = run("""
+      const presets = ['default', 'vector-search'];
+      console.log(JSON.stringify({
+        stored: [lib.patternChoice('default', presets), lib.patternChoice('vector-search', presets),
+                 lib.patternChoice('[site]_[extra]', presets), lib.patternChoice('', presets)],
+        preset: lib.readingFromForm('vector-search', 'ignored', ' %Y%m%d ', 'auto', '2'),
+        custom: lib.readingFromForm('custom', ' [site]_[extra] ', '', 'folder', 'x'),
+        blank:  lib.readingFromForm('custom', '   ', '', '', '-3'),
+      }));
+    """)
+    assert out["stored"] == ["default", "vector-search", "custom", "default"]
+    assert out["preset"] == {"filename_pattern": "vector-search", "datetime_format": "%Y%m%d",
+                             "label_from": "auto", "label_depth": 2}
+    assert out["custom"] == {"filename_pattern": "[site]_[extra]", "datetime_format": "",
+                             "label_from": "folder", "label_depth": 0}
+    assert out["blank"]["filename_pattern"] == "default"
+    assert out["blank"]["label_depth"] == 0
