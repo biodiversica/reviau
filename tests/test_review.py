@@ -23,7 +23,8 @@ def test_collect_skips_verdict_folders(segments_dir):
     write_wav(segments_dir / "incorrect" / "X" / "S_20240101_000000_0.0_5.0.wav")
     session = make_session(segments_dir)
     assert len(session.segments) == 3
-    assert all("/correct/" not in p and "/incorrect/" not in p for p in session.segments)
+    pending = [p.replace("\\", "/") for p in session.segments]
+    assert all("/correct/" not in p and "/incorrect/" not in p for p in pending)
 
 
 def test_counts(session):

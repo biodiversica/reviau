@@ -18,7 +18,7 @@ node = pytest.mark.skipif(shutil.which("node") is None, reason="node is not inst
 def run(script: str):
     result = subprocess.run(
         ["node", "-e", f"const lib = require({str(LIB)!r});\n{script}"],
-        capture_output=True, text=True, check=False,
+        capture_output=True, text=True, encoding="utf-8", check=False,
     )
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)

@@ -107,9 +107,13 @@ def make_workspace(root=None, **kwargs) -> Workspace:
 
 
 def goto_name(session: ReviewSession, needle: str) -> None:
-    """Put the segment whose path contains *needle* on screen."""
+    """Put the segment whose path contains *needle* on screen.
+
+    *needle* is written with forward slashes; the pending paths are native, so
+    on Windows they are compared with their separators turned round.
+    """
     for i, path in enumerate(session.segments):
-        if needle in path:
+        if needle in path.replace("\\", "/"):
             session.goto(i)
             return
     raise AssertionError(f"no pending segment matching {needle!r}")

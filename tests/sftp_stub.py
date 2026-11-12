@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import posixpath
 import socket
 import threading
 
@@ -30,8 +31,12 @@ def _make_sftp_interface(root: str):
         ROOT = root
 
         def _real(self, path: str) -> str:
-            path = os.path.normpath("/" + path.replace("\\", "/")).lstrip("/")
-            return os.path.join(self.ROOT, path)
+            # SFTP paths are POSIX on every system. Normalised as such, then
+            # joined part by part: os.path.normpath would turn them into
+            # rooted Windows paths, which os.path.join puts on the drive root
+            # instead of under ROOT.
+            parts = posixpath.normpath("/" + path.replace("\\", "/")).split("/")
+            return os.path.join(self.ROOT, *[part for part in parts if part])
 
         def _canon(self, path: str) -> str:
             return "/" + os.path.relpath(path, self.ROOT).replace(os.sep, "/").lstrip("./")
@@ -58,6 +63,9 @@ def _make_sftp_interface(root: str):
 
         def open(self, path, flags, attr):
             real = self._real(path)
+            # Windows opens in text mode unless told otherwise, which would
+            # rewrite the line endings inside every clip.
+            flags |= getattr(os, "O_BINARY", 0)
             try:
                 fd = os.open(real, flags, getattr(attr, "st_mode", None) or 0o666)
             except OSError as exc:
@@ -92,7 +100,13 @@ def _make_sftp_interface(root: str):
             return paramiko.SFTP_OK
 
         def posix_rename(self, oldpath, newpath):
-            return self.rename(oldpath, newpath)
+            # Replaces an existing target, as the OpenSSH extension does;
+            # os.rename refuses to on Windows.
+            try:
+                os.replace(self._real(oldpath), self._real(newpath))
+            except OSError as exc:
+                return paramiko.SFTPServer.convert_errno(exc.errno)
+            return paramiko.SFTP_OK
 
         def mkdir(self, path, attr):
             try:
