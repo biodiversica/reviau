@@ -11,11 +11,15 @@
 :root {
   color-scheme: light dark;
 
-  --bg:         light-dark(#f6f7f9, #12151a);
-  --panel:      light-dark(#ffffff, #1a1f26);
-  --ink:        light-dark(#1b1f24, #e7ebf0);
-  --muted:      light-dark(#5b6672, #9aa5b1);
-  --line:       light-dark(#dde2e8, #2b323c);
+  /* Three surfaces, kept clearly apart so the regions of the interface remain
+     distinct on monitors with poor contrast: the page (--bg), the panels laid
+     on it (--panel), and the fields and chips inside the panels (--field). */
+  --bg:         light-dark(#dfe4ea, #0a0c0f);
+  --panel:      light-dark(#ffffff, #1d232c);
+  --field:      light-dark(#eef1f5, #0f1217);
+  --ink:        light-dark(#111418, #f0f3f6);
+  --muted:      light-dark(#47515c, #aab4c0);
+  --line:       light-dark(#a9b3bf, #465162);
   --ok:         light-dark(#1a7f47, #2e9e5b);
   --ok-ink:     light-dark(#ffffff, #ffffff);
   --no:         light-dark(#b3261e, #d3554c);
@@ -78,7 +82,7 @@ button, input, select, textarea, code, kbd, pre, samp { font-family: var(--font)
   padding: 6px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--bg);
+  background: var(--field);
   color: var(--ink);
   font: 13px var(--font);
 }
@@ -104,7 +108,7 @@ dialog.reading h3 { margin: 16px 0 6px; font-size: 14px; }
   padding: 5px 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--bg);
+  background: var(--field);
   color: var(--ink);
   font: inherit;
   font-size: 13px;
@@ -238,7 +242,7 @@ main {
 }
 .controls label { display: flex; align-items: center; gap: 6px; font-size: 13px; }
 .controls input, .controls select {
-  background: var(--bg);
+  background: var(--field);
   color: var(--ink);
   border: 1px solid var(--line);
   border-radius: 7px;
@@ -360,7 +364,7 @@ kbd {
   border-radius: 5px;
   padding: 1px 7px;
   font: 12px var(--font);
-  background: var(--bg);
+  background: var(--field);
 }
 
 /* ── label panel ─────────────────────────────────────────────────────────── */
@@ -395,7 +399,7 @@ kbd {
   border: 1px solid var(--line);
   border-radius: 999px;
   overflow: hidden;
-  background: var(--bg);
+  background: var(--field);
 }
 .chip-pick {
   display: inline-flex;
@@ -420,7 +424,7 @@ kbd {
 /* A lit chip says "this is in the clip" — not "correct" — so it takes the
  * accent, leaving green and red to the Correct / Wrong buttons. */
 .chip.on {
-  background: color-mix(in srgb, var(--accent) 18%, var(--bg));
+  background: color-mix(in srgb, var(--accent) 22%, var(--field));
   border-color: var(--accent);
 }
 .chip.on .chip-pick { font-weight: 600; }
