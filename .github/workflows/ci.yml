@@ -4,73 +4,69 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+  # release.yml runs this first, and publishes the wheel built here.
+  workflow_call:
+
+permissions:
+  contents: read
 
 jobs:
-  test:
-    name: Python ${{ matrix.python-version }}
-    runs-on: ubuntu-latest
+  tests:
+    name: tests / ${{ matrix.os }} / py${{ matrix.python }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.12"]
+        include:
+          # The oldest Python pyproject.toml accepts.
+          - os: ubuntu-latest
+            python: "3.10"
+    runs-on: ${{ matrix.os }}
+    # A hung step would otherwise run until GitHub's 6-hour limit.
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-
+          python-version: ${{ matrix.python }}
       # Node runs the browser client's DOM-free helpers in tests/test_web_lib.py.
       # Without it those tests skip themselves and the client goes uncovered.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: "20"
-
-      # A real virtual environment on the matrix interpreter, which uv downloads
-      # if the runner does not already have it. Installing with --system instead
-      # would target the runner's Debian-managed /usr — refused under PEP 668,
-      # and the same interpreter for every entry in the matrix.
-      - name: Create the environment
-        run: uv venv --python ${{ matrix.python-version }}
-
+          node-version: "22"
       - name: Install
-        run: uv pip install -e ".[dev]"
-
+        run: uv sync --locked
+      - name: Lint
+        run: uv run ruff check .
       - name: Test
-        run: .venv/bin/python -m pytest -q
-
-  # The READMEs document a plain-pip route as well, so it is worth one job.
-  pip-install:
-    name: pip install
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-      - name: Install into a venv with pip
-        run: |
-          python -m venv .venv
-          .venv/bin/python -m pip install --upgrade pip
-          .venv/bin/python -m pip install -e ".[dev]"
-      - name: Test
-        run: .venv/bin/python -m pytest -q
+        run: uv run pytest
 
   build:
-    name: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - name: Build the wheel and sdist
-        run: uv build
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+      - name: Check the version agrees everywhere
+        run: |
+          version=$(uv version --short)
+          code=$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' src/reviau/__init__.py)
+          if [ "$version" != "$code" ]; then
+            echo "::error::pyproject.toml says $version, src/reviau/__init__.py says $code"
+            exit 1
+          fi
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match version $version"
+            exit 1
+          fi
+      - run: uv build
       - name: Check the wheel carries the GUI and the locales
         run: |
-          uv run --no-project --with wheel python - <<'PY'
-          import zipfile, glob
+          uv run --no-project python - <<'PY'
+          import glob, zipfile
           names = zipfile.ZipFile(glob.glob("dist/*.whl")[0]).namelist()
           need = ["web/index.html", "web/app.js", "web/lib.js", "web/styles.css",
                   "locales/en.json", "locales/pt-BR.json"]
@@ -78,3 +74,48 @@ jobs:
           assert not missing, f"missing from the wheel: {missing}"
           print("wheel contents OK")
           PY
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+  # What a new user does: run the installer on a machine with no Python set
+  # up, start reviau, open a folder and review a clip. The wheel stands in for
+  # the PyPI release.
+  installer:
+    name: installer / ${{ matrix.os }}
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist
+
+      - name: Run install.sh
+        if: runner.os != 'Windows'
+        run: |
+          REVIAU_PACKAGE="reviau @ $(ls "$PWD"/dist/*.whl)" sh scripts/install.sh
+      - name: Run install.ps1
+        if: runner.os == 'Windows'
+        # Windows PowerShell 5.1, the one every Windows machine has.
+        shell: powershell
+        run: |
+          $env:REVIAU_PACKAGE = "reviau @ $((Get-ChildItem dist\*.whl).FullName)"
+          powershell -NoProfile -ExecutionPolicy ByPass -File scripts\install.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: The installed command reviews a clip
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          reviau --version
+          uv run --no-project python scripts/smoke_test.py

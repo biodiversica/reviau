@@ -1,7 +1,7 @@
 import pytest
+from conftest import make_workspace, write_wav
 from fastapi.testclient import TestClient
 
-from conftest import make_workspace, write_wav
 from reviau.server import create_app
 
 

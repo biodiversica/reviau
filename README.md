@@ -1,6 +1,6 @@
 # (| reviau |)
 
-[Português (Brasil) →](README.pt-BR.md)
+[Português (Brasil) →](https://github.com/biodiversica/reviau/blob/main/README.pt-BR.md)
 
 reviau is a tool that provides a **browser interface for
 reviewing a folder of audio segments**. Each clip is presented as a spectrogram,
@@ -80,42 +80,47 @@ Collections named according to another convention can be described in the
 
 ## Installation
 
-### With [uv](https://docs.astral.sh/uv/) (recommended)
+**Without Python.** The installer sets up everything required and adds the
+`reviau` command. Running it again upgrades the installation.
 
-To run the tool without a permanent installation:
+On Windows, open PowerShell and run:
 
-```bash
-uvx --from git+https://github.com/biodiversica/reviau reviau /path/to/segments
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://github.com/biodiversica/reviau/releases/latest/download/install.ps1 | iex"
 ```
 
-To install it as a tool:
+On macOS and Linux, open a terminal and run:
 
-```bash
-uv tool install git+https://github.com/biodiversica/reviau
-reviau /path/to/segments
+```sh
+curl -LsSf https://github.com/biodiversica/reviau/releases/latest/download/install.sh | sh
 ```
 
-To work from a clone, for development:
+The installer performs the following steps:
+
+1. Installs [uv](https://docs.astral.sh/uv/) into `~/.local/bin` if it is not
+   already present. uv downloads its own Python, so no prior installation is
+   required, and any existing Python installation is left unchanged.
+2. Runs `uv tool install --python 3.12 reviau`, which installs the tool in an
+   isolated environment and adds `reviau` to the PATH.
+
+The command becomes available in terminals opened after the installation. The
+environment variable `REVIAU_PACKAGE` changes what the installer installs (for
+example, a specific version such as `reviau==0.1.0`). To uninstall, run
+`uv tool uninstall reviau`.
+
+**With uv or pip.** reviau is published on PyPI and requires Python 3.10 or
+later:
 
 ```bash
-git clone https://github.com/biodiversica/reviau
-cd reviau
-uv venv
-uv pip install -e ".[dev]"
-uv run reviau /path/to/segments
+uv tool install reviau   # as an isolated command-line tool
+pip install reviau       # or with pip, into the current environment
 ```
 
-### With pip
+`uv tool upgrade reviau` upgrades the tool. It can also be run once, without a
+permanent installation, with `uvx reviau /path/to/segments`.
 
-```bash
-python -m venv .venv && source .venv/bin/activate
-pip install git+https://github.com/biodiversica/reviau
-reviau /path/to/segments
-```
-
-Python 3.10 or later is required. The audio libraries (librosa and soundfile)
-depend on `libsndfile`, which is included in the wheels for Linux, macOS and
-Windows.
+The audio libraries (librosa and soundfile) depend on `libsndfile`, which is
+included in their wheels for Linux, macOS and Windows.
 
 ---
 
@@ -544,14 +549,21 @@ language in which it was carried out.
 ## Development
 
 ```bash
-uv venv && uv pip install -e ".[dev]"
-uv run pytest
+git clone https://github.com/biodiversica/reviau
+cd reviau
+uv sync               # installs the project and the development tools
+uv run ruff check .   # lint
+uv run pytest         # tests
+uv run reviau /path/to/segments
 ```
 
 The test suite covers the naming rules, the filing of reviewed clips, the HTTP
 API, the interface texts in both languages and a complete review carried out over
 an in-process SFTP server. The client's DOM-independent helpers are tested with
-Node.js, and those tests are skipped when Node.js is not installed.
+Node.js, and those tests are skipped when Node.js is not installed. Continuous
+integration runs the lint and the tests on Linux, macOS and Windows, and also
+runs the installers on all three systems with the built package, followed by
+`scripts/smoke_test.py`, which reviews a clip with the installed command.
 
 Before pushing, the suite should also be run as the continuous integration runs
 it:
@@ -564,6 +576,24 @@ Rich colours the Typer help output whenever it detects a terminal, which it
 always does on GitHub Actions. This changes the rendered output enough to break a
 test that passes locally.
 
+### Making a release
+
+Set the new version in both `pyproject.toml` and `src/reviau/__init__.py`, run
+`uv lock`, commit the change, and then create and push a tag:
+
+```bash
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+The tag triggers `.github/workflows/release.yml`. The tests run on all three
+systems, the package is uploaded to PyPI, and a **draft** GitHub release is
+created with the installers attached and the notes from
+`.github/release-notes.md`. After the highlights have been written, the release
+must be published, because the installation commands download from the latest
+*published* release. The build fails if the tag does not match the version in
+`pyproject.toml`, or if that version differs from the one in
+`src/reviau/__init__.py`.
+
 ## Licence
 
-MIT; see [LICENSE](LICENSE).
+MIT; see [LICENSE](https://github.com/biodiversica/reviau/blob/main/LICENSE).

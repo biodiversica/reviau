@@ -81,42 +81,48 @@ Conjuntos nomeados segundo outra convenção podem ser descritos nas
 
 ## Instalação
 
-### Com [uv](https://docs.astral.sh/uv/) (recomendado)
+**Sem Python.** O instalador configura tudo o que é necessário e adiciona o
+comando `reviau`. Executá-lo novamente atualiza a instalação.
 
-Para executar a ferramenta sem instalação permanente:
+No Windows, abra o PowerShell e execute:
 
-```bash
-uvx --from git+https://github.com/biodiversica/reviau reviau /caminho/dos/segmentos
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://github.com/biodiversica/reviau/releases/latest/download/install.ps1 | iex"
 ```
 
-Para instalá-la como ferramenta:
+No macOS e no Linux, abra um terminal e execute:
 
-```bash
-uv tool install git+https://github.com/biodiversica/reviau
-reviau /caminho/dos/segmentos
+```sh
+curl -LsSf https://github.com/biodiversica/reviau/releases/latest/download/install.sh | sh
 ```
 
-Para trabalhar a partir de um clone, em desenvolvimento:
+O instalador realiza as seguintes etapas:
+
+1. Instala o [uv](https://docs.astral.sh/uv/) em `~/.local/bin`, caso ainda não
+   esteja presente. O uv obtém o seu próprio Python, de modo que nenhuma
+   instalação prévia é necessária, e qualquer instalação existente do Python
+   permanece inalterada.
+2. Executa `uv tool install --python 3.12 reviau`, que instala a ferramenta num
+   ambiente isolado e adiciona `reviau` ao PATH.
+
+O comando fica disponível nos terminais abertos após a instalação. A variável de
+ambiente `REVIAU_PACKAGE` altera o que o instalador instala (por exemplo, uma
+versão específica, como `reviau==0.1.0`). Para desinstalar, execute
+`uv tool uninstall reviau`.
+
+**Com uv ou pip.** O reviau está publicado no PyPI e requer o Python 3.10 ou
+posterior:
 
 ```bash
-git clone https://github.com/biodiversica/reviau
-cd reviau
-uv venv
-uv pip install -e ".[dev]"
-uv run reviau /caminho/dos/segmentos
+uv tool install reviau   # como ferramenta de linha de comando isolada
+pip install reviau       # ou com pip, no ambiente atual
 ```
 
-### Com pip
+`uv tool upgrade reviau` atualiza a ferramenta. Ela também pode ser executada
+uma única vez, sem instalação permanente, com `uvx reviau /caminho/dos/segmentos`.
 
-```bash
-python -m venv .venv && source .venv/bin/activate
-pip install git+https://github.com/biodiversica/reviau
-reviau /caminho/dos/segmentos
-```
-
-É necessário o Python 3.10 ou posterior. As bibliotecas de áudio (librosa e
-soundfile) dependem da `libsndfile`, que já está incluída nos wheels para Linux,
-macOS e Windows.
+As bibliotecas de áudio (librosa e soundfile) dependem da `libsndfile`, que já
+está incluída nos seus wheels para Linux, macOS e Windows.
 
 ---
 
@@ -564,15 +570,22 @@ portanto, nunca dependem do idioma em que ela foi realizada.
 ## Desenvolvimento
 
 ```bash
-uv venv && uv pip install -e ".[dev]"
-uv run pytest
+git clone https://github.com/biodiversica/reviau
+cd reviau
+uv sync               # instala o projeto e as ferramentas de desenvolvimento
+uv run ruff check .   # lint
+uv run pytest         # testes
+uv run reviau /caminho/dos/segmentos
 ```
 
 A suíte de testes abrange as regras de nome, o arquivamento dos clipes revisados,
 a API HTTP, os textos da interface nos dois idiomas e uma revisão completa
 conduzida por um servidor SFTP em processo. As funções auxiliares do cliente que
 independem do DOM são testadas com Node.js, e esses testes são ignorados quando o
-Node.js não está instalado.
+Node.js não está instalado. A integração contínua executa o lint e os testes no
+Linux, no macOS e no Windows, e também executa os instaladores nos três sistemas
+com o pacote gerado, seguidos de `scripts/smoke_test.py`, que revisa um clipe com
+o comando instalado.
 
 Antes de enviar as alterações (push), recomenda-se executar também a suíte tal
 como a integração contínua a executa:
@@ -584,6 +597,23 @@ GITHUB_ACTIONS=true uv run pytest
 O Rich colore a saída de ajuda do Typer sempre que detecta um terminal, o que
 ocorre invariavelmente no GitHub Actions. Isso altera a saída renderizada o
 suficiente para quebrar um teste que passa localmente.
+
+### Publicação de uma versão
+
+Defina a nova versão em `pyproject.toml` e em `src/reviau/__init__.py`, execute
+`uv lock`, registre a alteração (commit) e, em seguida, crie e envie uma tag:
+
+```bash
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+A tag aciona `.github/workflows/release.yml`. Os testes são executados nos três
+sistemas, o pacote é enviado ao PyPI e uma versão **em rascunho** é criada no
+GitHub, com os instaladores anexados e as notas de `.github/release-notes.md`.
+Depois de redigidos os destaques, a versão deve ser publicada, pois os comandos
+de instalação baixam a partir da versão *publicada* mais recente. A geração do
+pacote falha se a tag não corresponder à versão de `pyproject.toml`, ou se essa
+versão diferir da de `src/reviau/__init__.py`.
 
 ## Licença
 

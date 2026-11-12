@@ -5,18 +5,22 @@ build-backend = "hatchling.build"
 [project]
 name = "reviau"
 version = "0.1.0"
-description = "Browser interface for reviewing audio segments against a classifier's labels — spectrogram, player, correct/incorrect verdicts and a review log — over a local folder or SSH/SFTP."
+description = "Browser interface for reviewing detected audio segments in bioacoustic analysis, locally or over SSH"
 readme = "README.md"
-license = { text = "MIT" }
 requires-python = ">=3.10"
-authors = [{ name = "Biodiversica" }]
-keywords = ["bioacoustics", "audio", "spectrogram", "annotation", "review", "sftp"]
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "biodiversica", email = "biodiversica@gmail.com" },
+]
+keywords = ["bioacoustics", "audio", "spectrogram", "annotation", "review", "template-matching", "vector-search", "sftp"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Web Environment",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "Topic :: Multimedia :: Sound/Audio :: Analysis",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
@@ -31,11 +35,10 @@ dependencies = [
     "paramiko>=3.4",
 ]
 
-[project.optional-dependencies]
-dev = ["pytest>=8.0", "httpx>=0.27"]
-
 [project.urls]
 Homepage = "https://github.com/biodiversica/reviau"
+Documentation = "https://github.com/biodiversica/reviau#readme"
+Repository = "https://github.com/biodiversica/reviau"
 Issues = "https://github.com/biodiversica/reviau/issues"
 
 [project.scripts]
@@ -46,6 +49,13 @@ packages = ["src/reviau"]
 
 [tool.hatch.build.targets.sdist]
 include = ["src/reviau", "tests", "README.md", "README.pt-BR.md", "LICENSE"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "httpx>=0.27",
+    "ruff>=0.6",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -11,8 +11,8 @@ __all__ = [
     "LocalBackend",
     "SFTPBackend",
     "SSHTarget",
-    "parse_ssh_spec",
     "open_backend",
+    "parse_ssh_spec",
 ]
 
 

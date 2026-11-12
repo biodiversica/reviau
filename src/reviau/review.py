@@ -6,7 +6,13 @@ import threading
 from dataclasses import dataclass
 from pathlib import Path
 
-from .annotations import AnnotationTable, Review, ReviewLog, SourceManifest, segment_bounds
+from .annotations import (
+    AnnotationTable,
+    Review,
+    ReviewLog,
+    SourceManifest,
+    segment_bounds,
+)
 from .config import REVIEW_LOG, ReviewConfig
 from .labels import LabelStore
 from .naming import nfc, slug, split_labels, with_labels

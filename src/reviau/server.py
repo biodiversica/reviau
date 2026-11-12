@@ -12,12 +12,12 @@ from pydantic import BaseModel
 
 from . import __version__, i18n
 from .config import ReviewConfig
-from .outcome import OUTCOMES
-from .review import ReviewSession, StaleSegment
-from .spectrogram import SPEC_TYPES, SpectrogramError
 from .naming import DEFAULT_DATETIME_FORMAT, PRESETS
+from .outcome import OUTCOMES
 from .reading import LABEL_FROM_CHOICES, Reading, ReadingError
 from .reading import preview as preview_reading
+from .review import ReviewSession, StaleSegment
+from .spectrogram import SPEC_TYPES, SpectrogramError
 from .storage import LocalBackend
 from .workspace import OpenError, Workspace, browse
 
@@ -258,7 +258,7 @@ def create_app(workspace: Workspace, config: ReviewConfig,
             opened = workspace.open(body.path)
         except OpenError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        except Exception as exc:  # noqa: BLE001 - shown to the reviewer verbatim
+        except Exception as exc:
             raise HTTPException(status_code=400, detail=f"The folder {body.path} could not be opened: {exc}") from exc
         app.state.pattern = opened.pattern
         return {**_state_payload(workspace), "pattern": _pattern_payload(opened.pattern)}
@@ -333,7 +333,7 @@ def create_app(workspace: Workspace, config: ReviewConfig,
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        except Exception as exc:  # noqa: BLE001 - shown to the reviewer verbatim
+        except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
         return {**_state_payload(workspace), **result}
 
@@ -363,7 +363,7 @@ def create_app(workspace: Workspace, config: ReviewConfig,
             data, filename = session.audio_bytes(index)
         except IndexError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return _range_response(data, filename, request)
 

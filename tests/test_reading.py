@@ -3,8 +3,8 @@
 import json
 
 import pytest
-
 from conftest import TEMPLATE, make_workspace
+
 from reviau.reading import READING_FILE, Reading, ReadingError, pattern_has_label
 
 

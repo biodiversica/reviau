@@ -1,8 +1,8 @@
 """Opening a segments folder — and another one — without restarting."""
 
 import pytest
-
 from conftest import make_workspace, write_wav
+
 from reviau.workspace import OpenError, browse
 
 

@@ -9,7 +9,6 @@ import socket
 import sys
 import threading
 import webbrowser
-from typing import Optional
 
 import typer
 import uvicorn
@@ -135,7 +134,7 @@ def _summary(session: ReviewSession | None, config: ReviewConfig, t) -> str:
 
 @cli.command()
 def review(
-    segments: Optional[str] = typer.Argument(
+    segments: str | None = typer.Argument(
         None,
         metavar="[SEGMENTS]",
         help="Segments folder to open at start: a local path, or "
@@ -151,7 +150,7 @@ def review(
         help="Allow several labels per segment, e.g. two species singing at once. "
              "On by default; --no-multi-label restricts each segment to one label.",
     ),
-    labels_file: Optional[str] = typer.Option(
+    labels_file: str | None = typer.Option(
         None, "--labels-file",
         help="Where the editable label list is kept, one label per line. Relative "
              "paths are inside each segments folder; an absolute path shares one "
@@ -178,7 +177,7 @@ def review(
         help="Address to bind. Use 0.0.0.0 to reach the GUI from another machine.",
     ),
     port: int = typer.Option(8765, "--port", "-p", min=1, max=65535, help="Port to listen on."),
-    token: Optional[str] = typer.Option(
+    token: str | None = typer.Option(
         None, "--token",
         help="Access token required by the GUI. One is generated when binding a "
              "non-loopback address; use --no-auth to serve without it.",
@@ -187,15 +186,15 @@ def review(
     open_browser: bool = typer.Option(
         True, "--open/--no-open", help="Open the GUI in a browser on start."
     ),
-    ssh_key: Optional[str] = typer.Option(None, "--ssh-key", help="Private key file for the SSH connection."),
-    known_hosts: Optional[str] = typer.Option(
+    ssh_key: str | None = typer.Option(None, "--ssh-key", help="Private key file for the SSH connection."),
+    known_hosts: str | None = typer.Option(
         None, "--known-hosts", help="Extra known_hosts file to trust."
     ),
     accept_new_host_key: bool = typer.Option(
         False, "--accept-new-host-key",
         help="Accept an unknown SSH host key instead of refusing to connect.",
     ),
-    cache_dir: Optional[str] = typer.Option(
+    cache_dir: str | None = typer.Option(
         None, "--cache-dir", help="Where remote clips are cached locally. [default: a temp folder]"
     ),
     _version: bool = typer.Option(
@@ -250,7 +249,7 @@ def review(
             raise typer.Exit(code=2) from exc
     session = workspace.session
 
-    access_token: Optional[str] = None
+    access_token: str | None = None
     if not no_auth:
         access_token = token or (None if _is_loopback(host) else secrets.token_urlsafe(16))
 

@@ -15,11 +15,11 @@ import matplotlib
 
 matplotlib.use("Agg")
 
-import librosa  # noqa: E402
-import librosa.display  # noqa: E402
-import numpy as np  # noqa: E402
-from matplotlib.backends.backend_agg import FigureCanvasAgg  # noqa: E402
-from matplotlib.figure import Figure  # noqa: E402
+import librosa
+import librosa.display
+import numpy as np
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.figure import Figure
 
 # A 1x1 transparent PNG, used whenever there is nothing to draw.
 BLANK_PNG = bytes.fromhex(
@@ -66,7 +66,7 @@ def render(
     """
     try:
         y, sr = librosa.load(str(path), sr=None, mono=True)
-    except Exception as exc:  # noqa: BLE001 - surfaced to the browser verbatim
+    except Exception as exc:
         raise SpectrogramError(str(exc)) from exc
 
     fmax = fmax_hz if fmax_hz and fmax_hz > 0 else sr // 2
@@ -103,7 +103,7 @@ def render(
             buf = io.BytesIO()
             fig.savefig(buf, format="png", dpi=dpi, bbox_inches="tight")
             return buf.getvalue()
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise SpectrogramError(str(exc)) from exc
         finally:
             fig.clf()

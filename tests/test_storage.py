@@ -1,4 +1,5 @@
 import os
+import pathlib
 
 import pytest
 
@@ -63,13 +64,14 @@ def test_append_csv_row_creates_then_appends(tmp_path):
     path = os.path.join(str(tmp_path), "out.csv")
     backend.append_csv_row(path, ["a", "1"], ["name", "n"])
     backend.append_csv_row(path, ["b", "2"], ["name", "n"])
-    assert open(path).read().splitlines() == ["name,n", "a,1", "b,2"]
+    assert pathlib.Path(path).read_text(encoding="utf-8").splitlines() == ["name,n", "a,1", "b,2"]
 
 
 def test_resolve_reads_relative_paths_against_the_root(tmp_path):
     backend = LocalBackend(str(tmp_path))
     assert backend.resolve("out.csv") == os.path.join(backend.root, "out.csv")
-    assert backend.resolve("/tmp/out.csv") == "/tmp/out.csv"
+    elsewhere = str(tmp_path.parent / "elsewhere" / "out.csv")   # absolute on every system
+    assert backend.resolve(elsewhere) == elsewhere
 
 
 def test_is_inside(tmp_path):

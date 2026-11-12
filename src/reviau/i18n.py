@@ -7,14 +7,14 @@ Two ship with the tool — ``en`` and ``pt-BR`` — one JSON file each under
 from __future__ import annotations
 
 import json
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 
 LOCALE_DIR = Path(__file__).parent / "locales"
 DEFAULT_LANG = "en"
 
 
-@lru_cache(maxsize=None)
+@cache
 def available() -> tuple[str, ...]:
     """Language codes with a locale file, default first."""
     codes = sorted(p.stem for p in LOCALE_DIR.glob("*.json"))
@@ -24,7 +24,7 @@ def available() -> tuple[str, ...]:
     return tuple(codes)
 
 
-@lru_cache(maxsize=None)
+@cache
 def bundle(lang: str) -> dict:
     """The whole translation bundle for *lang*, falling back to the default."""
     path = LOCALE_DIR / f"{lang}.json"

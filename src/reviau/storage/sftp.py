@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import errno
 import hashlib
 import os
@@ -33,14 +34,14 @@ class SSHTarget:
     accept_new_host_key: bool = False
     options: dict = field(default_factory=dict)
 
-    def apply_ssh_config(self, config_path: str | os.PathLike | None = None) -> "SSHTarget":
+    def apply_ssh_config(self, config_path: str | os.PathLike | None = None) -> SSHTarget:
         """Fill in host/user/port/key from ``~/.ssh/config``, so aliases work."""
         config_path = Path(config_path or Path.home() / ".ssh" / "config")
         if not config_path.exists():
             return self
         cfg = paramiko.SSHConfig()
         try:
-            with open(config_path) as fh:
+            with open(config_path, encoding="utf-8", errors="replace") as fh:
                 cfg.parse(fh)
         except OSError:
             return self
@@ -170,11 +171,10 @@ class SFTPBackend(Backend):
                 return getattr(self._sftp, name)(*args, **kwargs)
 
     def _reconnect(self) -> None:
-        try:
+        # A connection that has already failed may fail again on close.
+        with contextlib.suppress(Exception):
             if self._client is not None:
                 self._client.close()
-        except Exception:
-            pass
         self._connect()
 
     def close(self) -> None:
@@ -186,11 +186,9 @@ class SFTPBackend(Backend):
         """
         with self._lock:
             for obj in (self._sftp, self._client):
-                try:
+                with contextlib.suppress(Exception):
                     if obj is not None:
                         obj.close()
-                except Exception:
-                    pass
             self._sftp = self._client = None
             if self._owns_cache:
                 shutil.rmtree(self._cache, ignore_errors=True)
@@ -220,7 +218,7 @@ class SFTPBackend(Backend):
             current = stack.pop()
             try:
                 entries = self._sftp_call("listdir_attr", current)
-            except IOError:
+            except OSError:
                 continue
             for attr in entries:
                 path = posixpath.join(current, attr.filename)
@@ -235,13 +233,13 @@ class SFTPBackend(Backend):
         try:
             self._sftp_call("stat", path)
             return True
-        except IOError:
+        except OSError:
             return False
 
     def isdir(self, path: str) -> bool:
         try:
             return stat.S_ISDIR(self._sftp_call("stat", path).st_mode or 0)
-        except IOError:
+        except OSError:
             return False
 
     def makedirs(self, path: str) -> None:
@@ -252,14 +250,14 @@ class SFTPBackend(Backend):
         for folder in reversed(missing):
             try:
                 self._sftp_call("mkdir", folder)
-            except IOError:
+            except OSError:
                 if not self.isdir(folder):
                     raise
 
     def listdir(self, path: str) -> list[str]:
         try:
             return list(self._sftp_call("listdir", path))
-        except IOError:
+        except OSError:
             return []
 
     def rmdir(self, path: str) -> None:
@@ -269,7 +267,7 @@ class SFTPBackend(Backend):
         self.makedirs(posixpath.dirname(dst))
         try:
             self._sftp_call("posix_rename", src, dst)
-        except (IOError, AttributeError, paramiko.SSHException):
+        except (OSError, AttributeError, paramiko.SSHException):
             # posix_rename is an OpenSSH extension; plain rename is the fallback.
             self._sftp_call("rename", src, dst)
         self._drop_cached(src)
@@ -302,7 +300,7 @@ class SFTPBackend(Backend):
         try:
             attr = self._sftp_call("stat", path)
             stamp = f"{attr.st_size}-{int(attr.st_mtime or 0)}"
-        except IOError:
+        except OSError:
             stamp = "0-0"
         digest = hashlib.sha1(f"{path}|{stamp}".encode()).hexdigest()[:16]
         return self._cache / f"{digest}-{posixpath.basename(path)}"

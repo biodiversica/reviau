@@ -6,6 +6,7 @@ paramiko's own stub server demo; it exists only for the test suite.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import socket
 import threading
@@ -158,19 +159,17 @@ class SFTPTestServer:
             transport.set_subsystem_handler("sftp", paramiko.SFTPServer, interface)
             try:
                 transport.start_server(server=_Server())
-            except Exception:
+            except Exception:  # noqa: BLE001, S112 - a failed handshake drops only that client
                 continue
             self._transports.append(transport)
 
-    def __enter__(self) -> "SFTPTestServer":
+    def __enter__(self):
         self._thread.start()
         return self
 
     def __exit__(self, *exc) -> None:
         self._stop.set()
         for transport in self._transports:
-            try:
+            with contextlib.suppress(Exception):
                 transport.close()
-            except Exception:
-                pass
         self._sock.close()

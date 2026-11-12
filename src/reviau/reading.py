@@ -14,7 +14,13 @@ import json
 import re
 from dataclasses import asdict, dataclass
 
-from .naming import DEFAULT_DATETIME_FORMAT, LABEL_SOURCES, PRESETS, SegmentParser, expressions
+from .naming import (
+    DEFAULT_DATETIME_FORMAT,
+    LABEL_SOURCES,
+    PRESETS,
+    SegmentParser,
+    expressions,
+)
 
 #: The settings file, in the segments folder.
 READING_FILE = "reviau.json"
@@ -59,7 +65,7 @@ class Reading:
             return self.label_from
         return "filename" if pattern_has_label(self.filename_pattern) else "folder"
 
-    def validated(self) -> "Reading":
+    def validated(self) -> Reading:
         """These settings, cleaned, or :class:`ReadingError` saying what is wrong."""
         pattern = str(self.filename_pattern or "").strip() or "default"
         if pattern not in PRESETS:
@@ -87,7 +93,7 @@ class Reading:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict | None) -> "Reading":
+    def from_dict(cls, data: dict | None) -> Reading:
         """Settings from a JSON object, ignoring keys it does not know."""
         data = data if isinstance(data, dict) else {}
         defaults = cls()

@@ -11,9 +11,9 @@ from __future__ import annotations
 
 import os
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Callable
 
 from .config import ReviewConfig
 from .reading import Reading, ReadingError
@@ -61,7 +61,7 @@ class Workspace:
             raise OpenError("No folder was specified.")
         try:
             backend = self._open_backend(spec)
-        except Exception as exc:  # noqa: BLE001 - a connection or path problem
+        except Exception as exc:
             raise OpenError(f"The folder {spec} could not be opened: {exc}") from exc
         try:
             if not backend.isdir(backend.root):

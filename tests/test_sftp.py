@@ -3,12 +3,12 @@
 import csv
 
 import pytest
-
 from conftest import write_wav
+from sftp_stub import SFTPTestServer
+
 from reviau.config import ReviewConfig
 from reviau.review import ReviewSession
 from reviau.storage import open_backend
-from sftp_stub import SFTPTestServer
 
 
 @pytest.fixture
@@ -77,9 +77,9 @@ def test_a_full_review_over_ssh(remote):
     assert not (segments_dir / "POCA").exists()
     assert (segments_dir / "segment_sources.csv").exists()
 
-    rows = list(csv.DictReader((segments_dir / "annotations.csv").open()))
+    rows = list(csv.DictReader((segments_dir / "annotations.csv").open(encoding="utf-8")))
     assert len(rows) == 4        # the two-species clip contributes two rows
-    log = list(csv.DictReader((segments_dir / "reviews.csv").open()))
+    log = list(csv.DictReader((segments_dir / "reviews.csv").open(encoding="utf-8")))
     assert [r["outcome"] for r in log] == ["correct", "incorrect", "correct"]
     assert session.view() is None
 

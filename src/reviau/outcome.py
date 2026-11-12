@@ -87,6 +87,12 @@ def decide(predicted: str | None, labels, *, uncertain: bool = False) -> Outcome
 
 
 __all__ = [
-    "CORRECT", "INCORRECT", "UNCERTAIN", "LABELLED", "OUTCOMES",
-    "Outcome", "clean_labels", "decide",
+    "CORRECT",
+    "INCORRECT",
+    "LABELLED",
+    "OUTCOMES",
+    "UNCERTAIN",
+    "Outcome",
+    "clean_labels",
+    "decide",
 ]

@@ -7,10 +7,10 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from reviau.config import ReviewConfig  # noqa: E402
-from reviau.review import ReviewSession  # noqa: E402
-from reviau.storage import LocalBackend  # noqa: E402
-from reviau.workspace import Workspace  # noqa: E402
+from reviau.config import ReviewConfig
+from reviau.review import ReviewSession
+from reviau.storage import LocalBackend
+from reviau.workspace import Workspace
 
 
 def write_wav(path: Path, seconds: float = 0.5, sr: int = 22050) -> None:
