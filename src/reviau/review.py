@@ -16,7 +16,7 @@ from .annotations import (
 from .config import REVIEW_LOG, WORK_DIR, ReviewConfig, work_folder
 from .labels import LabelStore
 from .naming import nfc, slug, split_labels, with_labels
-from .outcome import OUTCOMES, Outcome, decide
+from .outcome import CORRECT, OUTCOMES, Outcome, decide
 from .reading import parser_for
 from .spectrogram import SpectrogramError, duration_seconds, render
 from .storage import Backend
@@ -41,6 +41,26 @@ class SegmentView:
     det_end: float | None
     score: float | None
     extra: str | None
+
+
+def _name_labels(outcome: Outcome, predicted_in_name: bool) -> tuple[str, ...]:
+    """The labels appended to a reviewed clip's file name, so that the tree of
+    reviewed clips reads without the log:
+
+    * **correct** — the confirmed prediction, then any label added:
+      ``correct/PONTO_A/BOAALB/x_BOAALB.wav``, ``x_BOAALB_PHYLUT.wav``;
+    * **incorrect** — what the clip really holds: ``x_TURDRU.wav``, or nothing
+      when it holds no label from the list;
+    * **labelled** — every label given, there being no prediction;
+    * **uncertain** — nothing: the name is kept as it was found.
+
+    A prediction already read from the file name is not written into it twice.
+    """
+    if not outcome.is_annotation:
+        return ()
+    if outcome.kind == CORRECT and not predicted_in_name:
+        return (outcome.predicted, *outcome.added)
+    return outcome.added
 
 
 class StaleSegment(LookupError):
@@ -236,8 +256,8 @@ class ReviewSession:
         Filing by the *prediction* keeps each folder answering one question —
         ``incorrect/PONTO_A/BOAALB/`` holds exactly the clips the model called
         BOAALB and got wrong, so counting a folder is that class's precision.
-        The labels the reviewer added beyond the prediction are appended to
-        the file name, and every clip's labels are in the review log.
+        The labels the clip was found to hold are appended to the file name
+        (see :func:`_name_labels`), and every clip's labels are in the review log.
 
         * **Label in a folder** (the default) — the folders that stood *above*
           the label are kept: ``PONTO_A/BOAALB/x.wav`` becomes
@@ -288,15 +308,8 @@ class ReviewSession:
 
             folder = self._destination_dir(info, outcome)
             self.backend.makedirs(folder)
-            # The folder names the prediction; the file name gains every label
-            # the reviewer added beyond it, so the tree reads without the log:
-            #   incorrect/PONTO_A/BOAALB/x_TURDRU.wav  called BOAALB, really TURDRU
-            #   correct/PONTO_A/BOAALB/x_PHYLUT.wav    BOAALB, and PHYLUT as well
-            # Nothing added — a plain correct, an incorrect holding nothing on the
-            # list — and anything marked uncertain keep the name as it was found.
-            name = self.backend.basename(src)
-            if outcome.is_annotation:
-                name = with_labels(name, outcome.added)
+            name = with_labels(self.backend.basename(src),
+                               _name_labels(outcome, info.label_in_filename))
             dest = self.backend.free_path(folder, name)
             self.backend.move(src, dest)
 

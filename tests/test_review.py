@@ -7,6 +7,8 @@ from reviau.review import StaleSegment
 
 FIRST = "PONTO_A/BOAALB/PONTO_A_20240115_053000_12.0_17.0_det1.wav"
 FIRST_NAME = "PONTO_A_20240115_053000_12.0_17.0_det1.wav"
+#: Where FIRST goes when it is confirmed: the prediction is written on the name.
+FIRST_CORRECT = "PONTO_A/BOAALB/PONTO_A_20240115_053000_12.0_17.0_det1_BOAALB.wav"
 
 
 def accept(session):
@@ -124,10 +126,10 @@ def test_the_same_layout_read_by_its_folders_instead(templated_dir):
     accept(session)
     moved = templated_dir / "reviau" / "correct" / "BOAALB"
     assert [p.name for p in moved.rglob("*.wav")] == [
-        "PONTO_A_20240115T053000_REC_12.0_17.0_BOAALB_0.873.wav"
+        "PONTO_A_20240115T053000_REC_12.0_17.0_BOAALB_0.873_BOAALB.wav"
     ]
     assert [p.name for p in moved.iterdir()] == [
-        "PONTO_A_20240115T053000_REC_12.0_17.0_BOAALB_0.873.wav"
+        "PONTO_A_20240115T053000_REC_12.0_17.0_BOAALB_0.873_BOAALB.wav"
     ]
 
 
@@ -211,7 +213,7 @@ def test_the_annotation_table_is_written_to_the_output_folder(segments_dir, tmp_
 def test_a_correct_clip_keeps_its_path_under_correct(session, segments_dir):
     goto_name(session, FIRST)
     assert accept(session)["outcome"] == "correct"
-    assert (segments_dir / "reviau" / "correct" / FIRST).exists()
+    assert (segments_dir / "reviau" / "correct" / FIRST_CORRECT).exists()
     assert len(session.segments) == 2
 
 
@@ -251,16 +253,16 @@ def test_a_second_species_leaves_a_correct_clip_in_correct(session, segments_dir
     """Two labels are a fact about the clip, not a third kind of verdict."""
     goto_name(session, FIRST)
     assert session.review(["BOAALB", "PHYLUT"])["outcome"] == "correct"
-    # Only the label added beyond the prediction goes on the name.
+    # The confirmed prediction goes on the name, then the label added beside it.
     assert (segments_dir / "reviau" / "correct" / "PONTO_A" / "BOAALB"
-            / "PONTO_A_20240115_053000_12.0_17.0_det1_PHYLUT.wav").exists()
+            / "PONTO_A_20240115_053000_12.0_17.0_det1_BOAALB_PHYLUT.wav").exists()
     assert session.counts()["correct"] == 1
 
 
-def test_a_plain_correct_keeps_its_name(session, segments_dir):
+def test_a_plain_correct_gains_the_label_it_was_confirmed_as(session, segments_dir):
     goto_name(session, FIRST)
     accept(session)
-    assert (segments_dir / "reviau" / "correct" / FIRST).exists()
+    assert (segments_dir / "reviau" / "correct" / FIRST_CORRECT).exists()
 
 
 def test_unsure_keeps_its_name_whatever_was_selected(session, segments_dir):
@@ -406,6 +408,17 @@ def test_vector_search_second_species_stays_correct(vector_search_dir):
     ]
 
 
+def test_a_prediction_read_from_the_name_is_not_written_twice(vector_search_dir):
+    """The name already ends in BOAALB; confirming it leaves the name as it was."""
+    session = make_session(vector_search_dir,
+                           filename_pattern="vector-search", label_from="filename")
+    goto_name(session, "PONTO_A_20240115_053000")
+    session.review(["BOAALB"])
+    assert [p.name for p in (vector_search_dir / "reviau" / "correct" / "BOAALB").glob("*.wav")] == [
+        "PONTO_A_20240115_053000_12.0-17.0s_0.873_BOAALB.wav"
+    ]
+
+
 def test_verdict_folders_do_not_follow_the_interface_language(segments_dir):
     session = make_session(segments_dir, lang="pt-BR")
     accept(session)
@@ -457,7 +470,7 @@ def test_every_review_is_logged_with_what_was_predicted(segments_dir):
     assert first["source"] == FIRST
     # The log points at the file as it was written, new label and all.
     assert first["destination"] == (
-        "correct/PONTO_A/BOAALB/PONTO_A_20240115_053000_12.0_17.0_det1_PHYLUT.wav"
+        "correct/PONTO_A/BOAALB/PONTO_A_20240115_053000_12.0_17.0_det1_BOAALB_PHYLUT.wav"
     )
     assert first["site"] == "PONTO A"
     # The manifest names the recording this clip came from.
@@ -579,7 +592,7 @@ def test_a_removed_label_still_works_when_a_clip_carries_it(segments_dir):
     goto_name(session, FIRST)
     assert session.view().label == "BOAALB"          # from its folder, not the list
     accept(session)
-    assert (segments_dir / "reviau" / "correct" / FIRST).exists()
+    assert (segments_dir / "reviau" / "correct" / FIRST_CORRECT).exists()
 
 
 def test_persistence_can_be_switched_off(segments_dir):

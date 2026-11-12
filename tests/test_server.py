@@ -58,7 +58,7 @@ def test_a_review_moves_the_file_and_reports_the_outcome(client, segments_dir):
     assert data["outcome"] == "correct"
     assert data["counts"]["pending"] == 2
     assert data["counts"]["correct"] == 1
-    assert data["moved"] == f"correct/{ON_SCREEN}"
+    assert data["moved"] == "correct/POCA/BOAALB/POCA_20240116_190000_40.0_45.0_det3_BOAALB.wav"
     assert (segments_dir / "reviau" / data["moved"]).exists()
     assert data["review_log"]["rows"] == 1
 

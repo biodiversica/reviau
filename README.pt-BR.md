@@ -279,26 +279,29 @@ Um clipe revisado é arquivado na pasta `reviau/`, sob o seu **resultado**,
 seguido do caminho que tinha, incluindo a pasta do rótulo **previsto**. Cada pasta responde, portanto, a
 uma única pergunta: `incorrect/PONTO_A/BOAALB/` contém exatamente os clipes que o
 modelo rotulou incorretamente como BOAALB, de modo que o número de arquivos em
-cada pasta fornece a precisão daquela classe. Os rótulos acrescentados durante a
+cada pasta fornece a precisão daquela classe. Os rótulos identificados durante a
 revisão são incluídos no fim do nome do arquivo, o que permite ler a árvore de
 pastas sem consultar o registro:
 
 ```
 PONTO_A/BOAALB/clipe.wav
-   ├── ✔ Correto                   →  reviau/correct/PONTO_A/BOAALB/clipe.wav
-   ├── ✔ Correto, + PHYLUT         →  reviau/correct/PONTO_A/BOAALB/clipe_PHYLUT.wav
+   ├── ✔ Correto                   →  reviau/correct/PONTO_A/BOAALB/clipe_BOAALB.wav
+   ├── ✔ Correto, + PHYLUT         →  reviau/correct/PONTO_A/BOAALB/clipe_BOAALB_PHYLUT.wav
    ├── ✘ Incorreto, TURDRU         →  reviau/incorrect/PONTO_A/BOAALB/clipe_TURDRU.wav
    ├── ✘ Incorreto, TURDRU+PHYLUT  →  reviau/incorrect/PONTO_A/BOAALB/clipe_TURDRU_PHYLUT.wav
    ├── ✘ Incorreto, nenhum         →  reviau/incorrect/PONTO_A/BOAALB/clipe.wav
    └── ? Incerto                   →  reviau/uncertain/PONTO_A/BOAALB/clipe.wav
 ```
 
-- O nome do arquivo **recebe cada rótulo acrescentado além da previsão**, na
-  ordem em que foram selecionados, com espaços escritos como `_` (`chuva forte`
-  passa a `_chuva_forte`). O nome original é mantido integralmente antes deles.
-  Quando nenhum rótulo é acrescentado (um Correto simples, ou um Incorreto sem
-  nenhum rótulo da lista), e para todo segmento marcado como Incerto, o nome
-  permanece inalterado.
+- O nome do arquivo **recebe os rótulos que o clipe comprovadamente contém**. Um
+  clipe correto recebe a previsão confirmada, seguida de qualquer rótulo
+  acrescentado; um clipe incorreto recebe os rótulos que descrevem o que ele de
+  fato contém. Os rótulos acrescentados seguem a ordem em que foram selecionados,
+  com espaços escritos como `_` (`chuva forte` passa a `_chuva_forte`), e o nome
+  original é mantido integralmente antes deles. Um Incorreto sem nenhum rótulo da
+  lista, e todo segmento marcado como Incerto, mantêm o nome inalterado.
+- Quando o rótulo é lido do nome do arquivo, a previsão já faz parte do nome e
+  não é acrescentada uma segunda vez.
 - Com nível do rótulo acima de 0, as pastas *abaixo* do rótulo **não** são recriadas:
   `BOAALB/PONTO_A/20240115/clipe.wav` corrigido para TURDRU passa a
   `incorrect/BOAALB/clipe_TURDRU.wav`, com uma pasta por rótulo previsto contendo
@@ -473,8 +476,10 @@ Como o rótulo faz parte do nome, os clipes são arquivados diretamente sob o
 resultado e o rótulo previsto (`correct/BOAALB/`, `incorrect/BOAALB/`), e os
 rótulos acrescentados são incluídos no fim do nome, como nos demais casos: um
 segmento chamado `..._0.873_BOAALB.wav` e corrigido para TURDRU passa a
-`incorrect/BOAALB/..._0.873_BOAALB_TURDRU.wav`. A pontuação é exibida ao lado do
-rótulo na interface e também consta do registro.
+`incorrect/BOAALB/..._0.873_BOAALB_TURDRU.wav`. Um segmento confirmado como
+BOAALB mantém o nome, `correct/BOAALB/..._0.873_BOAALB.wav`, pois a previsão já
+está no seu fim. A pontuação é exibida ao lado do rótulo na interface e também
+consta do registro.
 
 ---
 

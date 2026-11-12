@@ -273,24 +273,29 @@ A reviewed clip is filed in the `reviau/` folder under its **outcome**, followed
 by the path it had, including the folder of the **predicted** label. Each folder therefore answers a
 single question: `incorrect/PONTO_A/BOAALB/` contains exactly the clips that the
 model labelled BOAALB incorrectly, so the number of files in each folder gives
-the precision for that class. The labels added during the review are appended to
-the file name, so the folder tree can be read without consulting the log:
+the precision for that class. The labels identified during the review are
+appended to the file name, so the folder tree can be read without consulting the
+log:
 
 ```
 PONTO_A/BOAALB/clip.wav
-   ├── ✔ Correct                  →  reviau/correct/PONTO_A/BOAALB/clip.wav
-   ├── ✔ Correct, + PHYLUT        →  reviau/correct/PONTO_A/BOAALB/clip_PHYLUT.wav
+   ├── ✔ Correct                  →  reviau/correct/PONTO_A/BOAALB/clip_BOAALB.wav
+   ├── ✔ Correct, + PHYLUT        →  reviau/correct/PONTO_A/BOAALB/clip_BOAALB_PHYLUT.wav
    ├── ✘ Incorrect, TURDRU        →  reviau/incorrect/PONTO_A/BOAALB/clip_TURDRU.wav
    ├── ✘ Incorrect, TURDRU+PHYLUT →  reviau/incorrect/PONTO_A/BOAALB/clip_TURDRU_PHYLUT.wav
    ├── ✘ Incorrect, none          →  reviau/incorrect/PONTO_A/BOAALB/clip.wav
    └── ? Uncertain                →  reviau/uncertain/PONTO_A/BOAALB/clip.wav
 ```
 
-- The file name **receives every label added beyond the prediction**, in the
-  order in which they were selected, with spaces written as `_` (`chuva forte`
-  becomes `_chuva_forte`). The original name is kept in full before them. When no
-  label is added (a plain Correct, or an Incorrect with no label from the list),
-  and for every segment marked Uncertain, the name is left unchanged.
+- The file name **receives the labels that the clip was found to contain**. A
+  correct clip receives the confirmed prediction, followed by any label added; an
+  incorrect clip receives the labels that describe what it actually contains.
+  Added labels follow the order in which they were selected, with spaces written
+  as `_` (`chuva forte` becomes `_chuva_forte`), and the original name is kept in
+  full before them. An Incorrect with no label from the list, and every segment
+  marked Uncertain, keep their name unchanged.
+- When the label is read from the file name, the prediction is already part of
+  the name and is not appended a second time.
 - With a label depth above 0, the folders *below* the label are **not** recreated:
   `BOAALB/PONTO_A/20240115/clip.wav` corrected to TURDRU becomes
   `incorrect/BOAALB/clip_TURDRU.wav`, with one folder per predicted label
@@ -459,7 +464,9 @@ Because the label is part of the name, clips are filed directly under their
 outcome and predicted label (`correct/BOAALB/`, `incorrect/BOAALB/`), and the
 labels added are appended to the name as in every other case: a segment named
 `..._0.873_BOAALB.wav` and corrected to TURDRU becomes
-`incorrect/BOAALB/..._0.873_BOAALB_TURDRU.wav`. The score is displayed next to
+`incorrect/BOAALB/..._0.873_BOAALB_TURDRU.wav`. A segment confirmed as BOAALB
+keeps its name, `correct/BOAALB/..._0.873_BOAALB.wav`, since the prediction is
+already at its end. The score is displayed next to
 the label in the interface and is also recorded in the log.
 
 ---
