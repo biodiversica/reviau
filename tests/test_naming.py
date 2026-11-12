@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pytest
 
-from segment_reviewer.naming import (
+from reviau.naming import (
     SegmentParser,
     slug,
     source_key,

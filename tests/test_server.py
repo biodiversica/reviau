@@ -2,7 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from conftest import make_workspace, write_wav
-from segment_reviewer.server import create_app
+from reviau.server import create_app
 
 
 def serve(workspace, token=None):
@@ -29,7 +29,7 @@ def test_bootstrap_carries_everything_the_gui_needs(client):
 def test_index_page_is_served(client):
     api, _ = client
     body = api.get("/").text
-    assert "app.js" in body and "segment-reviewer" in body
+    assert "app.js" in body and "reviau" in body
 
 
 def test_translations_endpoint(client):
@@ -137,7 +137,7 @@ def test_token_guards_the_api(segments_dir):
     api = serve(make_workspace(segments_dir), token="s3cret")
     assert api.get("/api/state").status_code == 401
     assert api.get("/health").status_code == 200
-    assert api.get("/api/state", headers={"x-segrev-token": "s3cret"}).status_code == 200
+    assert api.get("/api/state", headers={"x-reviau-token": "s3cret"}).status_code == 200
     # The token in the query string is exchanged for a cookie, then dropped.
     landing = api.get("/?token=s3cret", follow_redirects=False)
     assert landing.status_code == 303

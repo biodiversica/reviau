@@ -125,5 +125,5 @@
     THEME_MODES, THEME_GLYPHS, themeMode, nextTheme,
   };
   if (typeof module === 'object' && module.exports) module.exports = lib;
-  else root.SegRev = lib;
+  else root.Reviau = lib;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

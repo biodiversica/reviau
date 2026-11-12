@@ -19,8 +19,8 @@ from .storage import LocalBackend
 from .workspace import OpenError, Workspace, browse
 
 WEB_DIR = Path(__file__).parent / "web"
-TOKEN_COOKIE = "segrev_token"
-TOKEN_HEADER = "x-segrev-token"
+TOKEN_COOKIE = "reviau_token"
+TOKEN_HEADER = "x-reviau-token"
 
 
 class ReviewBody(BaseModel):
@@ -144,7 +144,7 @@ def _pattern_payload(pattern) -> dict | None:
 def create_app(workspace: Workspace, config: ReviewConfig,
                token: str | None = None) -> FastAPI:
     """Build the app around a workspace, with or without a folder open in it."""
-    app = FastAPI(title="Segment Reviewer", version=__version__, docs_url=None,
+    app = FastAPI(title="reviau", version=__version__, docs_url=None,
                   redoc_url=None)
     app.state.workspace = workspace
     app.state.config = config

@@ -3,8 +3,8 @@ import re
 from typer.main import get_command
 from typer.testing import CliRunner
 
-from segment_reviewer import __version__
-from segment_reviewer.cli import _is_loopback, _pattern_has_label, cli
+from reviau import __version__
+from reviau.cli import _is_loopback, _pattern_has_label, cli
 
 runner = CliRunner()
 

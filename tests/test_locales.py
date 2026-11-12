@@ -4,7 +4,7 @@ import json
 import re
 from pathlib import Path
 
-LOCALES = Path(__file__).resolve().parents[1] / "src" / "segment_reviewer" / "locales"
+LOCALES = Path(__file__).resolve().parents[1] / "src" / "reviau" / "locales"
 
 
 def flat(tree, prefix=""):

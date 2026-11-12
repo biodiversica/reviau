@@ -7,10 +7,10 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from segment_reviewer.config import ReviewConfig  # noqa: E402
-from segment_reviewer.review import ReviewSession  # noqa: E402
-from segment_reviewer.storage import LocalBackend  # noqa: E402
-from segment_reviewer.workspace import Workspace  # noqa: E402
+from reviau.config import ReviewConfig  # noqa: E402
+from reviau.review import ReviewSession  # noqa: E402
+from reviau.storage import LocalBackend  # noqa: E402
+from reviau.workspace import Workspace  # noqa: E402
 
 
 def write_wav(path: Path, seconds: float = 0.5, sr: int = 22050) -> None:

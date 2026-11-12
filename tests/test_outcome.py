@@ -2,7 +2,7 @@
 
 import pytest
 
-from segment_reviewer.outcome import CORRECT, LABELLED, UNCERTAIN, INCORRECT, decide
+from reviau.outcome import CORRECT, LABELLED, UNCERTAIN, INCORRECT, decide
 
 
 @pytest.mark.parametrize("labels, kind, added", [

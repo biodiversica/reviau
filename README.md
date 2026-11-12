@@ -1,8 +1,8 @@
-# segment-reviewer
+# reviau
 
 [Português (Brasil) →](README.pt-BR.md)
 
-segment-reviewer is a command-line tool that serves a **browser interface for
+reviau is a command-line tool that serves a **browser interface for
 reviewing a folder of audio segments**. Each clip is presented as a spectrogram,
 together with the information its folder and file name provide. The reviewer
 listens to the clip and records **what it contains**; whether the label it
@@ -83,32 +83,32 @@ Collections named according to another convention can be described with
 To run the tool without a permanent installation:
 
 ```bash
-uvx --from git+https://github.com/biodiversica/segment-reviewer segment-reviewer /path/to/segments
+uvx --from git+https://github.com/biodiversica/reviau reviau /path/to/segments
 ```
 
 To install it as a tool:
 
 ```bash
-uv tool install git+https://github.com/biodiversica/segment-reviewer
-segment-reviewer /path/to/segments
+uv tool install git+https://github.com/biodiversica/reviau
+reviau /path/to/segments
 ```
 
 To work from a clone, for development:
 
 ```bash
-git clone https://github.com/biodiversica/segment-reviewer
-cd segment-reviewer
+git clone https://github.com/biodiversica/reviau
+cd reviau
 uv venv
 uv pip install -e ".[dev]"
-uv run segment-reviewer /path/to/segments
+uv run reviau /path/to/segments
 ```
 
 ### With pip
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install git+https://github.com/biodiversica/segment-reviewer
-segment-reviewer /path/to/segments
+pip install git+https://github.com/biodiversica/reviau
+reviau /path/to/segments
 ```
 
 Python 3.10 or later is required. The audio libraries (librosa and soundfile)
@@ -121,19 +121,19 @@ Windows.
 
 ```bash
 # Start without a folder and open one from the browser
-segment-reviewer
+reviau
 
 # Open a local folder at start-up, with the interface on this machine
-segment-reviewer ~/segments
+reviau ~/segments
 
 # Portuguese interface, a fixed set of label buttons and an annotation table
-segment-reviewer ~/segments --lang pt-BR --labels "BOAALB, PHYLUT, chuva" --annotations
+reviau ~/segments --lang pt-BR --labels "BOAALB, PHYLUT, chuva" --annotations
 
 # Segments on a server, reviewed from another computer
-segment-reviewer ssh://user@fieldserver/data/segments
+reviau ssh://user@fieldserver/data/segments
 
 # Serve the interface to the network (local network, Tailscale, …)
-segment-reviewer /data/segments --host 0.0.0.0 --port 8765
+reviau /data/segments --host 0.0.0.0 --port 8765
 ```
 
 The command prints a summary and the address to open. With `--host 0.0.0.0` it
@@ -280,7 +280,7 @@ and the review log in a folder of the reviewer's choice instead of the segments
 folder, leaving the collection under review unchanged:
 
 ```bash
-segment-reviewer /data/segments --output /data/reviewed
+reviau /data/segments --output /data/reviewed
 ```
 
 A relative path is resolved against the segments folder (`-o reviewed` refers to
@@ -346,7 +346,7 @@ Everything outside the brackets is matched literally.
 
 ```bash
 # PONTO_A_20240115T053000_REC_12.0_17.0_BOAALB_0.873.wav
-segment-reviewer ~/segments \
+reviau ~/segments \
     --filename-pattern '[site]_YYYYMMDDTHHMMSS_REC_[start_time]_[end_time]_[label]_[score]'
 ```
 
@@ -375,7 +375,7 @@ expression is matched against the name without its extension:
 
 ```bash
 # label first, then site, then a 12-digit timestamp: BOAALB-siteA-202401150530.wav
-segment-reviewer ~/segments \
+reviau ~/segments \
     --filename-pattern '^(?P<label>[A-Z]+)-(?P<site>\w+)-(?P<datetime>\d{12})$' \
     --datetime-format '%Y%m%d%H%M'
 ```
@@ -394,7 +394,7 @@ reads the label from the top folder, keeps the site folder below it, and still
 reads the site, times and score from the name:
 
 ```bash
-segment-reviewer ~/segments \
+reviau ~/segments \
     --filename-pattern '[site]_YYYYMMDDTHHMMSS_REC_[start_time]_[end_time]_[label]_[score]' \
     --label-from folder --label-depth 1
 ```
@@ -407,7 +407,7 @@ vector-search notebooks, with the **label and the similarity score in the
 name**:
 
 ```bash
-segment-reviewer ~/vector_search_segments --filename-pattern vector-search --annotations
+reviau ~/vector_search_segments --filename-pattern vector-search --annotations
 ```
 
 Because the label is part of the name, clips are filed directly under their
@@ -427,9 +427,9 @@ log and the annotation table. Clips are cached locally as they are opened, so
 returning to a previous clip does not require downloading it again.
 
 ```bash
-segment-reviewer ssh://user@fieldserver:22/data/segments
-segment-reviewer fieldserver:/data/segments          # scp-style address
-segment-reviewer ssh://fieldserver/data/segments --ssh-key ~/.ssh/id_field
+reviau ssh://user@fieldserver:22/data/segments
+reviau fieldserver:/data/segments          # scp-style address
+reviau ssh://fieldserver/data/segments --ssh-key ~/.ssh/id_field
 ```
 
 Host aliases, users, ports and identity files from `~/.ssh/config` are applied,
@@ -447,7 +447,7 @@ The interface is an ordinary web page, so the tool can run on the machine that
 holds the audio and be used from any other:
 
 ```bash
-segment-reviewer /data/segments --host 0.0.0.0 --port 8765 --no-open
+reviau /data/segments --host 0.0.0.0 --port 8765 --no-open
 ```
 
 When a non-loopback address is bound, an **access token** is generated and
@@ -465,7 +465,7 @@ SSH tunnel is recommended:
 
 ```bash
 # on the server
-segment-reviewer /data/segments --port 8765 --no-open
+reviau /data/segments --port 8765 --no-open
 # on the local computer
 ssh -N -L 8765:127.0.0.1:8765 user@server   # then open http://127.0.0.1:8765
 ```
@@ -479,7 +479,7 @@ instance control the same session; a folder opened in one is opened in both.
 ## Options
 
 ```
-segment-reviewer [SEGMENTS] [OPTIONS]
+reviau [SEGMENTS] [OPTIONS]
 
   SEGMENTS                      Folder to open at start-up: a local path, or
                                 ssh://[user@]host[:port]/path. Optional; a folder

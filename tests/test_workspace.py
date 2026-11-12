@@ -3,7 +3,7 @@
 import pytest
 
 from conftest import make_workspace, write_wav
-from segment_reviewer.workspace import OpenError, browse
+from reviau.workspace import OpenError, browse
 
 
 def test_a_workspace_starts_with_nothing_open():

@@ -5,9 +5,9 @@ import csv
 import pytest
 
 from conftest import write_wav
-from segment_reviewer.config import ReviewConfig
-from segment_reviewer.review import ReviewSession
-from segment_reviewer.storage import open_backend
+from reviau.config import ReviewConfig
+from reviau.review import ReviewSession
+from reviau.storage import open_backend
 from sftp_stub import SFTPTestServer
 
 

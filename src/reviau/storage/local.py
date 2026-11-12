@@ -83,7 +83,7 @@ class LocalBackend(Backend):
         folder = os.path.dirname(path)
         if folder:
             os.makedirs(folder, exist_ok=True)
-        tmp = f"{path}.tmp-segrev"
+        tmp = f"{path}.tmp-reviau"
         with open(tmp, "wb") as fh:
             fh.write(data)
         os.replace(tmp, path)

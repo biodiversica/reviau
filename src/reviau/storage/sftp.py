@@ -120,7 +120,7 @@ class SFTPBackend(Backend):
             root = posixpath.join(self._sftp.normalize("."), root)
         self.root = posixpath.normpath(root)
         self.display = SSHTarget(**{**target.__dict__, "path": self.root}).label
-        self._cache = Path(cache_dir or tempfile.mkdtemp(prefix="segment-reviewer-"))
+        self._cache = Path(cache_dir or tempfile.mkdtemp(prefix="reviau-"))
         self._cache.mkdir(parents=True, exist_ok=True)
         self._owns_cache = cache_dir is None
 

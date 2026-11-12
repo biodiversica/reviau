@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-LIB = Path(__file__).resolve().parents[1] / "src" / "segment_reviewer" / "web" / "lib.js"
+LIB = Path(__file__).resolve().parents[1] / "src" / "reviau" / "web" / "lib.js"
 node = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 
 

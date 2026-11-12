@@ -2,8 +2,8 @@ import os
 
 import pytest
 
-from segment_reviewer.storage import LocalBackend, open_backend
-from segment_reviewer.storage.sftp import parse_ssh_spec
+from reviau.storage import LocalBackend, open_backend
+from reviau.storage.sftp import parse_ssh_spec
 
 
 @pytest.mark.parametrize(

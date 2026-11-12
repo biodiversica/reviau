@@ -3,7 +3,7 @@
 import re
 from pathlib import Path
 
-WEB = Path(__file__).resolve().parents[1] / "src" / "segment_reviewer" / "web"
+WEB = Path(__file__).resolve().parents[1] / "src" / "reviau" / "web"
 CSS = (WEB / "styles.css").read_text(encoding="utf-8")
 HTML = (WEB / "index.html").read_text(encoding="utf-8")
 APP = (WEB / "app.js").read_text(encoding="utf-8")
@@ -40,9 +40,9 @@ def test_a_pinned_theme_sets_the_colour_scheme():
 def test_a_pinned_theme_is_applied_before_the_first_paint():
     """In <head>, with the key app.js stores the choice under."""
     head = HTML.split("</head>")[0]
-    assert "localStorage.getItem('segrev.theme')" in head
+    assert "localStorage.getItem('reviau.theme')" in head
     assert "dataset.theme" in head
-    assert "const THEME_KEY = 'segrev.theme';" in APP
+    assert "const THEME_KEY = 'reviau.theme';" in APP
 
 
 def test_the_footer_links_home_in_a_new_tab():

@@ -270,7 +270,7 @@ class ReviewSession:
 
         The outcome — correct, incorrect, uncertain, or labelled when nothing was
         predicted — follows from *labels* and the clip's own label; see
-        :func:`segment_reviewer.outcome.decide`. *relpath*, when given, must be
+        :func:`reviau.outcome.decide`. *relpath*, when given, must be
         the clip on screen: a second tab, or a click racing a rescan, must not
         file a clip the reviewer never heard.
         """

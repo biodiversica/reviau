@@ -3,7 +3,7 @@ import csv
 import pytest
 
 from conftest import TEMPLATE, goto_name, make_session, write_wav
-from segment_reviewer.review import StaleSegment
+from reviau.review import StaleSegment
 
 FIRST = "PONTO_A/BOAALB/PONTO_A_20240115_053000_12.0_17.0_det1.wav"
 FIRST_NAME = "PONTO_A_20240115_053000_12.0_17.0_det1.wav"

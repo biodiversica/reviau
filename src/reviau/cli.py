@@ -1,4 +1,4 @@
-"""``segment-reviewer`` — start the reviewer and serve its GUI to a browser."""
+"""``reviau`` — start the reviewer and serve its GUI to a browser."""
 
 from __future__ import annotations
 
@@ -43,9 +43,9 @@ cli = typer.Typer(
         "configurable with --label-from and --filename-pattern.\n\n"
         "SEGMENTS may be a local folder or a remote one over SSH, and may be left "
         "out: the folder can be opened — and changed — from the browser.\n"
-        "  segment-reviewer\n"
-        "  segment-reviewer /data/segments\n"
-        "  segment-reviewer ssh://user@host/data/segments"
+        "  reviau\n"
+        "  reviau /data/segments\n"
+        "  reviau ssh://user@host/data/segments"
     ),
 )
 
@@ -54,7 +54,7 @@ LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
 
 def _version_callback(value: bool) -> None:
     if value:
-        typer.echo(f"segment-reviewer {__version__}")
+        typer.echo(f"reviau {__version__}")
         raise typer.Exit()
 
 
@@ -255,8 +255,8 @@ def review(
     ssh_key: Optional[str] = typer.Option(None, "--ssh-key", help="Private key file for the SSH connection."),
     ssh_password: Optional[str] = typer.Option(
         None, "--ssh-password",
-        envvar="SEGMENT_REVIEWER_SSH_PASSWORD",
-        help="SSH password. Prefer keys or an agent; reads $SEGMENT_REVIEWER_SSH_PASSWORD.",
+        envvar="REVIAU_SSH_PASSWORD",
+        help="SSH password. Prefer keys or an agent; reads $REVIAU_SSH_PASSWORD.",
     ),
     known_hosts: Optional[str] = typer.Option(
         None, "--known-hosts", help="Extra known_hosts file to trust."
@@ -375,7 +375,7 @@ def review(
         typer.echo(f"  {t('cli.token_hint')}")
     typer.echo(f"  {t('cli.stop_hint')}")
 
-    if open_browser and not os.environ.get("SEGMENT_REVIEWER_NO_BROWSER"):
+    if open_browser and not os.environ.get("REVIAU_NO_BROWSER"):
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
 
     try:

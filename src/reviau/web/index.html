@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>segment-reviewer</title>
+  <title>reviau</title>
   <link rel="stylesheet" href="/static/styles.css">
   <script>
     // Applied before the first paint: left to app.js, which runs at the end of
     // the page, the system theme would flash before a pinned one lands.
     try {
-      const pinned = localStorage.getItem('segrev.theme');
+      const pinned = localStorage.getItem('reviau.theme');
       if (pinned === 'light' || pinned === 'dark') {
         document.documentElement.dataset.theme = pinned;
       }
@@ -21,7 +21,7 @@
   <header class="bar">
     <div class="bar-left">
       <span class="logo">🎧</span>
-      <span class="app-title" data-i18n="app.title">segment-reviewer</span>
+      <span class="app-title" data-i18n="app.title">reviau</span>
     </div>
     <div class="bar-right">
       <span class="counts" id="counts"></span>

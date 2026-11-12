@@ -1,8 +1,8 @@
-# segment-reviewer
+# reviau
 
 [← English](README.md)
 
-O segment-reviewer é uma ferramenta de linha de comando que disponibiliza uma
+O reviau é uma ferramenta de linha de comando que disponibiliza uma
 **interface no navegador para a revisão de uma pasta de segmentos de áudio**.
 Cada clipe é apresentado como espectrograma, acompanhado das informações
 fornecidas pela sua pasta e pelo nome do seu arquivo. O revisor ouve o clipe e
@@ -84,32 +84,32 @@ Conjuntos nomeados segundo outra convenção podem ser descritos com
 Para executar a ferramenta sem instalação permanente:
 
 ```bash
-uvx --from git+https://github.com/biodiversica/segment-reviewer segment-reviewer /caminho/dos/segmentos
+uvx --from git+https://github.com/biodiversica/reviau reviau /caminho/dos/segmentos
 ```
 
 Para instalá-la como ferramenta:
 
 ```bash
-uv tool install git+https://github.com/biodiversica/segment-reviewer
-segment-reviewer /caminho/dos/segmentos
+uv tool install git+https://github.com/biodiversica/reviau
+reviau /caminho/dos/segmentos
 ```
 
 Para trabalhar a partir de um clone, em desenvolvimento:
 
 ```bash
-git clone https://github.com/biodiversica/segment-reviewer
-cd segment-reviewer
+git clone https://github.com/biodiversica/reviau
+cd reviau
 uv venv
 uv pip install -e ".[dev]"
-uv run segment-reviewer /caminho/dos/segmentos
+uv run reviau /caminho/dos/segmentos
 ```
 
 ### Com pip
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install git+https://github.com/biodiversica/segment-reviewer
-segment-reviewer /caminho/dos/segmentos
+pip install git+https://github.com/biodiversica/reviau
+reviau /caminho/dos/segmentos
 ```
 
 É necessário o Python 3.10 ou posterior. As bibliotecas de áudio (librosa e
@@ -122,19 +122,19 @@ macOS e Windows.
 
 ```bash
 # Iniciar sem pasta e abrir uma pelo navegador
-segment-reviewer --lang pt-BR
+reviau --lang pt-BR
 
 # Abrir uma pasta local na inicialização, com a interface nesta máquina
-segment-reviewer ~/segmentos --lang pt-BR
+reviau ~/segmentos --lang pt-BR
 
 # Conjunto fixo de botões de rótulo e tabela de anotações
-segment-reviewer ~/segmentos --lang pt-BR --labels "BOAALB, PHYLUT, chuva" --annotations
+reviau ~/segmentos --lang pt-BR --labels "BOAALB, PHYLUT, chuva" --annotations
 
 # Segmentos num servidor, revisados a partir de outro computador
-segment-reviewer ssh://usuario@servidor/dados/segmentos --lang pt-BR
+reviau ssh://usuario@servidor/dados/segmentos --lang pt-BR
 
 # Disponibilizar a interface para a rede (rede local, Tailscale, …)
-segment-reviewer /dados/segmentos --host 0.0.0.0 --port 8765
+reviau /dados/segmentos --host 0.0.0.0 --port 8765
 ```
 
 O comando exibe um resumo e o endereço a ser aberto. Com `--host 0.0.0.0`, exibe
@@ -285,7 +285,7 @@ registro da revisão numa pasta escolhida pelo revisor, em vez da pasta de
 segmentos, mantendo inalterado o conjunto em revisão:
 
 ```bash
-segment-reviewer /dados/segmentos --output /dados/revisados
+reviau /dados/segmentos --output /dados/revisados
 ```
 
 Um caminho relativo é resolvido a partir da pasta de segmentos (`-o revisados`
@@ -353,7 +353,7 @@ entre colchetes**. Todo o texto fora dos colchetes é comparado literalmente.
 
 ```bash
 # PONTO_A_20240115T053000_REC_12.0_17.0_BOAALB_0.873.wav
-segment-reviewer ~/segmentos \
+reviau ~/segmentos \
     --filename-pattern '[site]_YYYYMMDDTHHMMSS_REC_[start_time]_[end_time]_[label]_[score]'
 ```
 
@@ -384,7 +384,7 @@ expressão é aplicada ao nome do arquivo sem a extensão:
 ```bash
 # rótulo primeiro, depois o ponto, depois um carimbo de data e hora de 12 dígitos:
 # BOAALB-pontoA-202401150530.wav
-segment-reviewer ~/segmentos \
+reviau ~/segmentos \
     --filename-pattern '^(?P<label>[A-Z]+)-(?P<site>\w+)-(?P<datetime>\d{12})$' \
     --datetime-format '%Y%m%d%H%M'
 ```
@@ -403,7 +403,7 @@ abaixo lê o rótulo da pasta superior, mantém a pasta do ponto abaixo dela e
 continua a ler o ponto, os horários e o escore do nome do arquivo:
 
 ```bash
-segment-reviewer ~/segmentos \
+reviau ~/segmentos \
     --filename-pattern '[site]_YYYYMMDDTHHMMSS_REC_[start_time]_[end_time]_[label]_[score]' \
     --label-from folder --label-depth 1
 ```
@@ -416,7 +416,7 @@ de busca vetorial bioacústica, com o **rótulo e o escore de similaridade no
 nome**:
 
 ```bash
-segment-reviewer ~/vector_search_segments --filename-pattern vector-search --annotations
+reviau ~/vector_search_segments --filename-pattern vector-search --annotations
 ```
 
 Como o rótulo faz parte do nome, os clipes são arquivados diretamente sob o
@@ -437,9 +437,9 @@ armazenados localmente em cache à medida que são abertos, de modo que o retorn
 um clipe anterior dispensa novo download.
 
 ```bash
-segment-reviewer ssh://usuario@servidor:22/dados/segmentos
-segment-reviewer servidor:/dados/segmentos           # endereço no estilo scp
-segment-reviewer ssh://servidor/dados/segmentos --ssh-key ~/.ssh/id_campo
+reviau ssh://usuario@servidor:22/dados/segmentos
+reviau servidor:/dados/segmentos           # endereço no estilo scp
+reviau ssh://servidor/dados/segmentos --ssh-key ~/.ssh/id_campo
 ```
 
 Apelidos de host, usuários, portas e arquivos de identidade definidos em
@@ -457,7 +457,7 @@ A interface é uma página web comum; assim, a ferramenta pode ser executada na
 máquina que armazena o áudio e utilizada a partir de qualquer outra:
 
 ```bash
-segment-reviewer /dados/segmentos --host 0.0.0.0 --port 8765 --no-open
+reviau /dados/segmentos --host 0.0.0.0 --port 8765 --no-open
 ```
 
 Quando um endereço diferente do loopback é utilizado, um **token de acesso** é
@@ -475,7 +475,7 @@ acessível apenas pela tailnet) ou um túnel SSH:
 
 ```bash
 # no servidor
-segment-reviewer /dados/segmentos --port 8765 --no-open
+reviau /dados/segmentos --port 8765 --no-open
 # no computador local
 ssh -N -L 8765:127.0.0.1:8765 usuario@servidor   # em seguida, abrir http://127.0.0.1:8765
 ```
@@ -490,7 +490,7 @@ em ambos.
 ## Opções
 
 ```
-segment-reviewer [SEGMENTOS] [OPÇÕES]
+reviau [SEGMENTOS] [OPÇÕES]
 
   SEGMENTOS                     Pasta a abrir na inicialização: caminho local, ou
                                 ssh://[usuário@]host[:porta]/caminho. Opcional; a

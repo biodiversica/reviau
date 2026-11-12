@@ -1,4 +1,4 @@
-/* Segment Reviewer — browser client.
+/* reviau — browser client.
  *
  * The server owns the pending list and the files; this file only draws it and
  * sends verdicts back. Spectrogram controls redraw the image alone — the audio
@@ -80,14 +80,14 @@
   const {
     splitLabels, spectrogramUrl, audioUrl, toggleLabel, buttonLabels, reviewLabels,
     rememberFolder, THEME_GLYPHS, themeMode, nextTheme,
-  } = window.SegRev;
+  } = window.Reviau;
 
   // ── theme ─────────────────────────────────────────────────────────────────
   // Nothing here names a colour: the stylesheet holds both palettes, and this
   // only sets `data-theme` on <html> and remembers the choice. The inline
   // script in index.html has already applied a pinned theme before the first
   // paint; this takes over the switching.
-  const THEME_KEY = 'segrev.theme';
+  const THEME_KEY = 'reviau.theme';
   let theme = (() => {
     try { return themeMode(localStorage.getItem(THEME_KEY)); } catch (_) { return 'system'; }
   })();
@@ -443,7 +443,7 @@
 
   // ── the folder under review ───────────────────────────────────────────────
   const recentFolders = () => {
-    try { return JSON.parse(localStorage.getItem('segrev.recent')) || []; } catch (_) { return []; }
+    try { return JSON.parse(localStorage.getItem('reviau.recent')) || []; } catch (_) { return []; }
   };
 
   function renderFolder() {
@@ -474,7 +474,7 @@
       const data = await post('/api/open', { path: wanted });
       app.state = data;
       try {
-        localStorage.setItem('segrev.recent',
+        localStorage.setItem('reviau.recent',
           JSON.stringify(rememberFolder(recentFolders(), data.folder, 8)));
       } catch (_) { /* a private window: no history, nothing else lost */ }
       el.folderInput.blur();
@@ -530,7 +530,7 @@
     const data = await api(`/api/i18n/${encodeURIComponent(code)}`);
     app.lang = data.lang;
     app.bundle = data.bundle;
-    if (persist) localStorage.setItem('segrev.lang', app.lang);
+    if (persist) localStorage.setItem('reviau.lang', app.lang);
     el.lang.value = app.lang;
     applyI18n();
     paintTheme();
@@ -575,7 +575,7 @@
 
   for (const control of [el.specType, el.specFmin, el.specFmax, el.specDb]) {
     control.addEventListener('change', () => {
-      localStorage.setItem('segrev.spec', JSON.stringify({
+      localStorage.setItem('reviau.spec', JSON.stringify({
         type: el.specType.value, fmin: el.specFmin.value,
         fmax: el.specFmax.value, db: el.specDb.value,
       }));
@@ -623,13 +623,13 @@
       el.lang.innerHTML = '';
       for (const lang of boot.languages) el.lang.add(new Option(lang.name, lang.code));
 
-      const spec = { ...boot.spec_defaults, ...safeParse(localStorage.getItem('segrev.spec')) };
+      const spec = { ...boot.spec_defaults, ...safeParse(localStorage.getItem('reviau.spec')) };
       el.specType.value = spec.type || 'mel';
       el.specFmin.value = spec.fmin ?? 0;
       el.specFmax.value = spec.fmax ?? 0;
       el.specDb.value = spec.db ?? -80;
 
-      await setLanguage(localStorage.getItem('segrev.lang') || boot.lang, { persist: false });
+      await setLanguage(localStorage.getItem('reviau.lang') || boot.lang, { persist: false });
       renderPattern(boot.pattern);
       if (!app.state.folder) el.folderInput.focus();
       else loadAudio();
