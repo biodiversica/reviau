@@ -68,18 +68,18 @@ def test_a_full_review_over_ssh(remote):
     assert session.counts() == {"pending": 0, "correct": 2, "incorrect": 1,
                                 "uncertain": 0, "labelled": 0}
     # Filed under the outcome, then the path the clip had, prediction included.
-    assert (segments_dir / "correct" / "POCA" / "BOAALB").is_dir()
-    assert len(list((segments_dir / "incorrect" / "PONTO_A" / "BOAALB").glob("*.wav"))) == 1
-    assert len(list((segments_dir / "correct" / "PONTO_A" / "PHYLUT").glob("*.wav"))) == 1
+    assert (segments_dir / "reviau" / "correct" / "POCA" / "BOAALB").is_dir()
+    assert len(list((segments_dir / "reviau" / "incorrect" / "PONTO_A" / "BOAALB").glob("*.wav"))) == 1
+    assert len(list((segments_dir / "reviau" / "correct" / "PONTO_A" / "PHYLUT").glob("*.wav"))) == 1
 
     # The folders the clips came from empty out over SSH too; the root stays.
     assert not (segments_dir / "PONTO_A").exists()
     assert not (segments_dir / "POCA").exists()
     assert (segments_dir / "segment_sources.csv").exists()
 
-    rows = list(csv.DictReader((segments_dir / "annotations.csv").open(encoding="utf-8")))
+    rows = list(csv.DictReader((segments_dir / "reviau" / "annotations.csv").open(encoding="utf-8")))
     assert len(rows) == 4        # the two-species clip contributes two rows
-    log = list(csv.DictReader((segments_dir / "reviews.csv").open(encoding="utf-8")))
+    log = list(csv.DictReader((segments_dir / "reviau" / "reviews.csv").open(encoding="utf-8")))
     assert [r["outcome"] for r in log] == ["correct", "incorrect", "correct"]
     assert session.view() is None
 

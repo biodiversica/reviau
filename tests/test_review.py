@@ -1,7 +1,7 @@
 import csv
 
 import pytest
-from conftest import TEMPLATE, goto_name, make_session, write_wav
+from conftest import TEMPLATE, goto_name, make_session, write_text, write_wav
 
 from reviau.review import StaleSegment
 
@@ -19,12 +19,30 @@ def nothing_reviewed(pending):
 
 
 def test_collect_skips_verdict_folders(segments_dir):
-    write_wav(segments_dir / "correct" / "S_20240101_000000_0.0_5.0.wav")
-    write_wav(segments_dir / "incorrect" / "X" / "S_20240101_000000_0.0_5.0.wav")
+    write_wav(segments_dir / "reviau" / "correct" / "S_20240101_000000_0.0_5.0.wav")
+    write_wav(segments_dir / "reviau" / "incorrect" / "X" / "S_20240101_000000_0.0_5.0.wav")
     session = make_session(segments_dir)
     assert len(session.segments) == 3
     pending = [p.replace("\\", "/") for p in session.segments]
-    assert all("/correct/" not in p and "/incorrect/" not in p for p in pending)
+    assert all("/reviau/" not in p for p in pending)
+
+
+def test_a_collection_folder_named_like_an_outcome_is_still_reviewed(segments_dir):
+    """Only the work folder is skipped: a site or class folder that happens to be
+    called "correct" holds clips like any other."""
+    write_wav(segments_dir / "correct" / "BOAALB" / "S_20240101_000000_0.0_5.0.wav")
+    assert len(make_session(segments_dir).segments) == 4
+
+
+def test_a_review_writes_nothing_beside_the_clips(segments_dir):
+    before = {p.name for p in segments_dir.iterdir()}
+    session = make_session(segments_dir, save_annotations=True)
+    goto_name(session, FIRST)
+    accept(session)
+    after = {p.name for p in segments_dir.iterdir()}
+    assert after - before == {"reviau"}
+    written = {p.name for p in (segments_dir / "reviau").iterdir()}
+    assert written == {"correct", "reviews.csv", "labels.txt", "annotations.csv"}
 
 
 def test_counts(session):
@@ -89,7 +107,7 @@ def test_a_correction_on_a_templated_name_is_appended_to_it(templated_dir):
     session = make_session(templated_dir, filename_pattern=TEMPLATE, label_from="filename")
     goto_name(session, "BOAALB")
     session.review(["TURDRU"])
-    assert (templated_dir / "incorrect" / "BOAALB"
+    assert (templated_dir / "reviau" / "incorrect" / "BOAALB"
             / "PONTO_A_20240115T053000_REC_12.0_17.0_BOAALB_0.873_TURDRU.wav").exists()
 
 
@@ -104,7 +122,7 @@ def test_the_same_layout_read_by_its_folders_instead(templated_dir):
     goto_name(session, "BOAALB")
     assert session.view().site == "PONTO A"      # still read from the name
     accept(session)
-    moved = templated_dir / "correct" / "BOAALB"
+    moved = templated_dir / "reviau" / "correct" / "BOAALB"
     assert [p.name for p in moved.rglob("*.wav")] == [
         "PONTO_A_20240115T053000_REC_12.0_17.0_BOAALB_0.873.wav"
     ]
@@ -119,7 +137,7 @@ def test_a_correction_under_label_depth_drops_the_folders_below_the_label(templa
     )
     goto_name(session, "BOAALB")
     session.review(["TURDRU"])
-    assert [p.name for p in (templated_dir / "incorrect" / "BOAALB").iterdir()] == [
+    assert [p.name for p in (templated_dir / "reviau" / "incorrect" / "BOAALB").iterdir()] == [
         "PONTO_A_20240115T053000_REC_12.0_17.0_BOAALB_0.873_TURDRU.wav"
     ]
 
@@ -146,9 +164,15 @@ def test_output_sends_the_verdict_folders_elsewhere(segments_dir, tmp_path):
     accept(session)
     assert (out / "correct" / "PONTO_A" / "BOAALB").is_dir()
     assert (out / "reviews.csv").exists()
-    assert not (segments_dir / "correct").exists()
-    assert not (segments_dir / "reviews.csv").exists()
+    assert (out / "labels.txt").exists()          # the label list goes with them
+    assert not (segments_dir / "reviau").exists()
     assert not (segments_dir / "PONTO_A" / "BOAALB").exists()   # emptied and pruned
+
+
+def test_an_output_elsewhere_still_skips_what_was_filed_in_place(segments_dir, tmp_path):
+    accept(make_session(segments_dir))
+    elsewhere = make_session(segments_dir, output=str(tmp_path / "reviewed"))
+    assert len(elsewhere.segments) == 2
 
 
 def test_a_relative_output_is_read_against_the_segments_folder(segments_dir):
@@ -180,14 +204,14 @@ def test_the_annotation_table_is_written_to_the_output_folder(segments_dir, tmp_
     goto_name(session, FIRST)
     accept(session)
     assert (out / "annotations.csv").exists()
-    assert not (segments_dir / "annotations.csv").exists()
+    assert not (segments_dir / "reviau" / "annotations.csv").exists()
 
 
 # ── where a review files a clip ──────────────────────────────────────────────
 def test_a_correct_clip_keeps_its_path_under_correct(session, segments_dir):
     goto_name(session, FIRST)
     assert accept(session)["outcome"] == "correct"
-    assert (segments_dir / "correct" / FIRST).exists()
+    assert (segments_dir / "reviau" / "correct" / FIRST).exists()
     assert len(session.segments) == 2
 
 
@@ -196,7 +220,7 @@ def test_a_wrong_clip_is_filed_under_what_was_predicted(session, segments_dir):
     got incorrect — whatever they really are, which is in the log."""
     goto_name(session, FIRST)
     assert session.review(["TURDRU"])["outcome"] == "incorrect"
-    moved = segments_dir / "incorrect" / "PONTO_A" / "BOAALB"
+    moved = segments_dir / "reviau" / "incorrect" / "PONTO_A" / "BOAALB"
     # ...and its name gains what it really is.
     assert [p.name for p in moved.glob("*.wav")] == [
         "PONTO_A_20240115_053000_12.0_17.0_det1_TURDRU.wav"
@@ -206,21 +230,21 @@ def test_a_wrong_clip_is_filed_under_what_was_predicted(session, segments_dir):
 def test_every_label_given_instead_is_appended_in_order(session, segments_dir):
     goto_name(session, FIRST)
     session.review(["TURDRU", "PHYLUT"])
-    assert (segments_dir / "incorrect" / "PONTO_A" / "BOAALB"
+    assert (segments_dir / "reviau" / "incorrect" / "PONTO_A" / "BOAALB"
             / "PONTO_A_20240115_053000_12.0_17.0_det1_TURDRU_PHYLUT.wav").exists()
 
 
 def test_a_label_with_a_space_is_appended_as_one_token(session, segments_dir):
     goto_name(session, FIRST)
     session.review(["chuva forte"])
-    assert (segments_dir / "incorrect" / "PONTO_A" / "BOAALB"
+    assert (segments_dir / "reviau" / "incorrect" / "PONTO_A" / "BOAALB"
             / "PONTO_A_20240115_053000_12.0_17.0_det1_chuva_forte.wav").exists()
 
 
 def test_a_clip_holding_nothing_on_the_list_is_wrong(session, segments_dir):
     goto_name(session, FIRST)
     assert session.review([])["outcome"] == "incorrect"
-    assert (segments_dir / "incorrect" / FIRST).exists()
+    assert (segments_dir / "reviau" / "incorrect" / FIRST).exists()
 
 
 def test_a_second_species_leaves_a_correct_clip_in_correct(session, segments_dir):
@@ -228,7 +252,7 @@ def test_a_second_species_leaves_a_correct_clip_in_correct(session, segments_dir
     goto_name(session, FIRST)
     assert session.review(["BOAALB", "PHYLUT"])["outcome"] == "correct"
     # Only the label added beyond the prediction goes on the name.
-    assert (segments_dir / "correct" / "PONTO_A" / "BOAALB"
+    assert (segments_dir / "reviau" / "correct" / "PONTO_A" / "BOAALB"
             / "PONTO_A_20240115_053000_12.0_17.0_det1_PHYLUT.wav").exists()
     assert session.counts()["correct"] == 1
 
@@ -236,19 +260,19 @@ def test_a_second_species_leaves_a_correct_clip_in_correct(session, segments_dir
 def test_a_plain_correct_keeps_its_name(session, segments_dir):
     goto_name(session, FIRST)
     accept(session)
-    assert (segments_dir / "correct" / FIRST).exists()
+    assert (segments_dir / "reviau" / "correct" / FIRST).exists()
 
 
 def test_unsure_keeps_its_name_whatever_was_selected(session, segments_dir):
     goto_name(session, FIRST)
     session.review(["TURDRU"], uncertain=True)
-    assert (segments_dir / "uncertain" / FIRST).exists()
+    assert (segments_dir / "reviau" / "uncertain" / FIRST).exists()
 
 
 def test_unsure_is_filed_apart_whatever_is_selected(session, segments_dir):
     goto_name(session, FIRST)
     assert session.review(["BOAALB"], uncertain=True)["outcome"] == "uncertain"
-    assert (segments_dir / "uncertain" / FIRST).exists()
+    assert (segments_dir / "reviau" / "uncertain" / FIRST).exists()
     assert session.counts() == {**nothing_reviewed(2), "uncertain": 1}
 
 
@@ -259,7 +283,7 @@ def test_a_site_folder_under_the_label_is_not_rebuilt(label_on_top_dir):
     goto_name(session, "det1")
     assert session.view().label == "BOAALB"
     session.review(["TURDRU"])
-    moved = label_on_top_dir / "incorrect" / "BOAALB"
+    moved = label_on_top_dir / "reviau" / "incorrect" / "BOAALB"
     assert [p.name for p in moved.iterdir()] == [
         "PONTO_A_20240115_053000_12.0_17.0_det1_TURDRU.wav"
     ]
@@ -299,7 +323,7 @@ def test_a_clip_with_no_prediction_is_labelled_not_judged(segments_dir):
     goto_name(session, "LOOSE_")
     assert session.review(["rain"])["outcome"] == "labelled"
     # With no prediction every label given is new, so all go on the name.
-    assert (segments_dir / "labelled" / "LOOSE_20240101_000000_0.0_5.0_rain.wav").exists()
+    assert (segments_dir / "reviau" / "labelled" / "LOOSE_20240101_000000_0.0_5.0_rain.wav").exists()
     assert session.counts()["labelled"] == 1
 
 
@@ -308,15 +332,15 @@ def test_label_from_none_keeps_the_whole_path(segments_dir):
     goto_name(session, FIRST)
     assert session.view().label == ""
     session.review([])
-    assert (segments_dir / "labelled" / FIRST).exists()
+    assert (segments_dir / "reviau" / "labelled" / FIRST).exists()
 
 
 def test_a_collision_gets_a_suffix_instead_of_overwriting(segments_dir):
-    write_wav(segments_dir / "incorrect" / FIRST)
+    write_wav(segments_dir / "reviau" / "incorrect" / FIRST)
     session = make_session(segments_dir)
     goto_name(session, FIRST)
     session.review([])
-    names = sorted(p.name for p in (segments_dir / "incorrect" / "PONTO_A" / "BOAALB").glob("*.wav"))
+    names = sorted(p.name for p in (segments_dir / "reviau" / "incorrect" / "PONTO_A" / "BOAALB").glob("*.wav"))
     assert names == [FIRST_NAME, "PONTO_A_20240115_053000_12.0_17.0_det1_2.wav"]
 
 
@@ -347,7 +371,7 @@ def test_a_log_that_cannot_be_written_undoes_the_move(session, segments_dir, mon
     with pytest.raises(OSError):
         session.review(["TURDRU"])
     assert (segments_dir / FIRST).exists()
-    assert not list((segments_dir / "incorrect").rglob("*.wav"))
+    assert not list((segments_dir / "reviau" / "incorrect").rglob("*.wav"))
     assert len(session.segments) == 3
     assert session.view().relpath == FIRST
 
@@ -366,7 +390,7 @@ def test_vector_search_files_flat_under_the_prediction(vector_search_dir):
                            filename_pattern="vector-search", label_from="filename")
     goto_name(session, "PONTO_A_20240115_053000")
     session.review(["TURDRU"])
-    out = vector_search_dir / "incorrect" / "BOAALB"
+    out = vector_search_dir / "reviau" / "incorrect" / "BOAALB"
     assert [p.name for p in out.glob("*.wav")] == [
         "PONTO_A_20240115_053000_12.0-17.0s_0.873_BOAALB_TURDRU.wav"
     ]
@@ -377,7 +401,7 @@ def test_vector_search_second_species_stays_correct(vector_search_dir):
                            filename_pattern="vector-search", label_from="filename")
     goto_name(session, "PONTO_A_20240115_053000")
     session.review(["BOAALB", "PHYLUT"])
-    assert [p.name for p in (vector_search_dir / "correct" / "BOAALB").glob("*.wav")] == [
+    assert [p.name for p in (vector_search_dir / "reviau" / "correct" / "BOAALB").glob("*.wav")] == [
         "PONTO_A_20240115_053000_12.0-17.0s_0.873_BOAALB_PHYLUT.wav"
     ]
 
@@ -385,7 +409,7 @@ def test_vector_search_second_species_stays_correct(vector_search_dir):
 def test_verdict_folders_do_not_follow_the_interface_language(segments_dir):
     session = make_session(segments_dir, lang="pt-BR")
     accept(session)
-    assert list((segments_dir / "correct").rglob("*.wav"))
+    assert list((segments_dir / "reviau" / "correct").rglob("*.wav"))
 
 
 # ── navigation ───────────────────────────────────────────────────────────────
@@ -423,7 +447,7 @@ def test_every_review_is_logged_with_what_was_predicted(segments_dir):
     goto_name(session, "PHYLUT")
     session.review([], uncertain=True)
 
-    rows = read_csv(segments_dir / "reviews.csv")
+    rows = read_csv(segments_dir / "reviau" / "reviews.csv")
     assert [(r["predicted"], r["outcome"], r["labels"], r["added"]) for r in rows] == [
         ("BOAALB", "correct", "BOAALB;PHYLUT", "PHYLUT"),
         ("BOAALB", "incorrect", "TURDRU", "TURDRU"),
@@ -445,8 +469,8 @@ def test_every_review_is_logged_with_what_was_predicted(segments_dir):
 def test_the_log_is_written_without_the_annotation_table(segments_dir):
     session = make_session(segments_dir)
     accept(session)
-    assert len(read_csv(segments_dir / "reviews.csv")) == 1
-    assert not (segments_dir / "annotations.csv").exists()
+    assert len(read_csv(segments_dir / "reviau" / "reviews.csv")) == 1
+    assert not (segments_dir / "reviau" / "annotations.csv").exists()
 
 
 def test_the_log_carries_the_score_the_name_gave(vector_search_dir):
@@ -454,7 +478,7 @@ def test_the_log_carries_the_score_the_name_gave(vector_search_dir):
                            filename_pattern="vector-search", label_from="filename")
     goto_name(session, "PONTO_A_20240115_053000")
     accept(session)
-    assert read_csv(vector_search_dir / "reviews.csv")[0]["score"] == "0.873"
+    assert read_csv(vector_search_dir / "reviau" / "reviews.csv")[0]["score"] == "0.873"
 
 
 # ── annotations ──────────────────────────────────────────────────────────────
@@ -462,7 +486,7 @@ def test_annotations_record_one_row_per_label(segments_dir):
     session = make_session(segments_dir, multi_label=True, save_annotations=True)
     goto_name(session, FIRST)
     session.review(["BOAALB", "PHYLUT"])
-    rows = read_csv(segments_dir / "annotations.csv")
+    rows = read_csv(segments_dir / "reviau" / "annotations.csv")
     assert [r["label"] for r in rows] == ["BOAALB", "PHYLUT"]
     assert {r["site"] for r in rows} == {"PONTO A"}
     assert {r["file"] for r in rows} == {"PONTO_A_20240115_053000.wav"}
@@ -476,7 +500,7 @@ def test_annotations_hold_what_the_clip_really_is(segments_dir):
     accept(session)
     goto_name(session, "POCA_20240116_190000")
     session.review(["TURDRU"])
-    rows = read_csv(segments_dir / "annotations.csv")
+    rows = read_csv(segments_dir / "reviau" / "annotations.csv")
     assert [r["label"] for r in rows] == ["BOAALB", "TURDRU"]
     # Only the first clip is in the manifest, so the second row names no recording.
     assert rows[1]["file"] == ""
@@ -491,9 +515,9 @@ def test_a_rejected_prediction_is_never_annotated(segments_dir):
     session.review([])
     goto_name(session, "PHYLUT")
     session.review(["PHYLUT"], uncertain=True)
-    assert not (segments_dir / "annotations.csv").exists()
+    assert not (segments_dir / "reviau" / "annotations.csv").exists()
     assert session.annotations.state.rows == 0
-    assert len(read_csv(segments_dir / "reviews.csv")) == 2
+    assert len(read_csv(segments_dir / "reviau" / "reviews.csv")) == 2
 
 
 def test_a_blank_annotations_path_falls_back_inside_the_segments_folder(segments_dir):
@@ -506,13 +530,13 @@ def test_a_blank_annotations_path_falls_back_inside_the_segments_folder(segments
 def test_the_list_is_seeded_from_the_collection_and_written_once_in_use(segments_dir):
     session = make_session(segments_dir)
     assert session.label_choices() == ["BOAALB", "PHYLUT"]
-    assert not (segments_dir / "labels.txt").exists()      # opening writes nothing
+    assert not (segments_dir / "reviau" / "labels.txt").exists()      # opening writes nothing
     accept(session)
-    assert (segments_dir / "labels.txt").read_text().split() == ["BOAALB", "PHYLUT"]
+    assert (segments_dir / "reviau" / "labels.txt").read_text().split() == ["BOAALB", "PHYLUT"]
 
 
 def test_a_stored_list_wins_over_what_the_collection_uses(segments_dir):
-    (segments_dir / "labels.txt").write_text("rain\nTURDRU\n", encoding="utf-8")
+    write_text(segments_dir / "reviau" / "labels.txt", "rain\nTURDRU\n")
     session = make_session(segments_dir)
     assert session.label_choices() == ["rain", "TURDRU"]
 
@@ -522,16 +546,16 @@ def test_reviewing_one_folder_never_rewrites_another_folders_list(segments_dir, 
     in the session had its own labels.txt replaced by the command-line list."""
     other = tmp_path / "other"
     write_wav(other / "PHYLUT" / "S_20240101_000000_0.0_5.0.wav")
-    (other / "labels.txt").write_text("PHYLUT\nTURDRU\nrain\n", encoding="utf-8")
+    write_text(other / "reviau" / "labels.txt", "PHYLUT\nTURDRU\nrain\n")
     accept(make_session(segments_dir))
     session = make_session(other)
     assert session.label_choices() == ["PHYLUT", "TURDRU", "rain"]
     accept(session)
-    assert (other / "labels.txt").read_text().split() == ["PHYLUT", "TURDRU", "rain"]
+    assert (other / "reviau" / "labels.txt").read_text().split() == ["PHYLUT", "TURDRU", "rain"]
 
 
 def test_comments_and_blank_lines_are_ignored(segments_dir):
-    (segments_dir / "labels.txt").write_text("# my labels\n\nrain\n  TURDRU  \n", encoding="utf-8")
+    write_text(segments_dir / "reviau" / "labels.txt", "# my labels\n\nrain\n  TURDRU  \n")
     assert make_session(segments_dir).label_choices() == ["rain", "TURDRU"]
 
 
@@ -555,14 +579,14 @@ def test_a_removed_label_still_works_when_a_clip_carries_it(segments_dir):
     goto_name(session, FIRST)
     assert session.view().label == "BOAALB"          # from its folder, not the list
     accept(session)
-    assert (segments_dir / "correct" / FIRST).exists()
+    assert (segments_dir / "reviau" / "correct" / FIRST).exists()
 
 
 def test_persistence_can_be_switched_off(segments_dir):
     session = make_session(segments_dir, labels_file="")
     session.labels.add("TURDRU")
     assert "TURDRU" in session.label_choices()
-    assert not (segments_dir / "labels.txt").exists()
+    assert not (segments_dir / "reviau" / "labels.txt").exists()
 
 
 def test_a_folder_that_cannot_be_written_is_reported_not_fatal(segments_dir, monkeypatch):
@@ -591,6 +615,6 @@ def test_the_first_review_makes_only_the_folder_it_needs(segments_dir):
     session = make_session(segments_dir)
     goto_name(session, FIRST)
     accept(session)
-    assert (segments_dir / "correct").is_dir()
-    for name in ("incorrect", "uncertain", "labelled", "multi"):
-        assert not (segments_dir / name).exists()
+    assert (segments_dir / "reviau" / "correct").is_dir()
+    for name in ("incorrect", "uncertain", "labelled"):
+        assert not (segments_dir / "reviau" / name).exists()

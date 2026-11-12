@@ -7,8 +7,16 @@ from dataclasses import dataclass
 from .naming import DEFAULT_DATETIME_FORMAT
 from .reading import Reading
 
+#: The folder reviau writes in, inside the segments folder unless --output
+#: names another: the verdict folders, the review log, the label list, the
+#: annotation table and the reading settings. Nothing is written beside the
+#: clips themselves, so deleting this one folder undoes everything but the moves.
+WORK_DIR = "reviau"
+
 #: Optional manifest mapping each clip to the recording it was cut from. When a
-#: collection carries one, the annotation table can name that recording.
+#: collection carries one, the annotation table can name that recording. It is
+#: input, written by whatever cut the clips, so it is read from the segments
+#: folder.
 SOURCES_CSV = "segment_sources.csv"
 ANNOTATION_COLUMNS = ["site", "file", "label", "start_time", "end_time"]
 
@@ -20,7 +28,7 @@ REVIEW_COLUMNS = [
     "labels", "added", "site", "recording", "start_time", "end_time",
 ]
 
-#: Where the editable label list is kept, relative to the segments folder.
+#: Where the editable label list is kept, relative to the work folder.
 DEFAULT_LABELS_FILE = "labels.txt"
 
 
@@ -30,10 +38,10 @@ class ReviewConfig:
 
     Most come from the command line and apply to every folder opened. The four
     reading fields describe one collection instead: they are filled in per
-    folder from its ``reviau.json`` (see :mod:`reviau.reading`), and changed
-    from the GUI. The verdict folders are named after the outcomes and never
-    translated, so a review split over sessions in two languages files its
-    clips in one place.
+    folder from the ``settings.json`` in its work folder (see
+    :mod:`reviau.reading`), and changed from the GUI. The verdict folders are
+    named after the outcomes and never translated, so a review split over
+    sessions in two languages files its clips in one place.
     """
 
     segments: str = "."
@@ -53,13 +61,14 @@ class ReviewConfig:
     save_annotations: bool = False
     annotations_path: str = ""
 
-    #: The editable label list. Empty keeps the list for the session only.
+    #: The editable label list. Empty keeps the list for the session only; a
+    #: relative path is read against the work folder.
     labels_file: str = DEFAULT_LABELS_FILE
 
-    #: Folder the verdict folders and the review log are created in. Empty
-    #: means the segments folder itself; a relative path is read against it, an
-    #: absolute one is taken as given, so a review can write anywhere the
-    #: reviewer can reach.
+    #: The work folder (see :data:`WORK_DIR`). Empty means ``reviau/`` inside
+    #: the segments folder; a relative path is read against the segments
+    #: folder, an absolute one is taken as given, so a review can write
+    #: anywhere the reviewer can reach.
     output: str = ""
 
     @property
@@ -67,3 +76,9 @@ class ReviewConfig:
         """The reading fields, as the :class:`~reviau.reading.Reading` they form."""
         return Reading(self.filename_pattern, self.datetime_format,
                        self.label_from, self.label_depth)
+
+
+def work_folder(backend, output: str = "") -> str:
+    """The folder reviau writes in for the segments folder *backend* is open on."""
+    raw = str(output or "").strip()
+    return backend.resolve(raw) if raw else backend.join(backend.root, WORK_DIR)

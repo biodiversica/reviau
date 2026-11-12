@@ -1,5 +1,5 @@
 import pytest
-from conftest import make_workspace, write_wav
+from conftest import make_workspace, write_text, write_wav
 from fastapi.testclient import TestClient
 
 from reviau.server import create_app
@@ -11,7 +11,7 @@ def serve(workspace, token=None):
 
 @pytest.fixture
 def client(segments_dir):
-    (segments_dir / "labels.txt").write_text("rain\nBOAALB\nPHYLUT\n", encoding="utf-8")
+    write_text(segments_dir / "reviau" / "labels.txt", "rain\nBOAALB\nPHYLUT\n")
     workspace = make_workspace(segments_dir)
     return serve(workspace), workspace.session
 
@@ -59,7 +59,7 @@ def test_a_review_moves_the_file_and_reports_the_outcome(client, segments_dir):
     assert data["counts"]["pending"] == 2
     assert data["counts"]["correct"] == 1
     assert data["moved"] == f"correct/{ON_SCREEN}"
-    assert (segments_dir / data["moved"]).exists()
+    assert (segments_dir / "reviau" / data["moved"]).exists()
     assert data["review_log"]["rows"] == 1
 
 
@@ -160,7 +160,7 @@ def test_adding_and_removing_labels_from_the_gui(client, segments_dir):
     data = api.post("/api/labels", json={"remove": "rain"}).json()
     assert data["labels"] == ["BOAALB", "PHYLUT", "TURDRU"]
     # The edit is on disk, so the next session starts from it.
-    assert (segments_dir / "labels.txt").read_text().split() == ["BOAALB", "PHYLUT", "TURDRU"]
+    assert (segments_dir / "reviau" / "labels.txt").read_text().split() == ["BOAALB", "PHYLUT", "TURDRU"]
     # The reply carries the fresh state, so the buttons redraw in one round trip.
     assert data["state"]["labels"] == data["labels"]
 
@@ -263,7 +263,7 @@ def test_a_preview_reads_the_pending_names_without_applying_anything(client, seg
     assert data["samples"][0]["name"].endswith(".wav")
     assert data["label_from"] == "folder"
     assert api.get("/api/state").json()["reading"]["filename_pattern"] == "default"
-    assert not (segments_dir / "reviau.json").exists()
+    assert not (segments_dir / "reviau" / "settings.json").exists()
 
 
 def test_a_preview_of_unusable_settings_says_why(client):
@@ -278,7 +278,7 @@ def test_applying_settings_over_http(label_on_top_dir):
     data = api.post("/api/reading", json={"label_depth": 1}).json()
     assert data["reading"]["label_depth"] == 1
     assert data["labels"] == ["BOAALB", "PHYLUT"]
-    assert (label_on_top_dir / "reviau.json").exists()
+    assert (label_on_top_dir / "reviau" / "settings.json").exists()
 
 
 def test_reading_settings_need_a_folder_open():

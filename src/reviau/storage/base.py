@@ -37,12 +37,13 @@ class Backend(abc.ABC):
     @abc.abstractmethod
     def is_absolute(self, path: str) -> bool: ...
 
-    def resolve(self, path: str) -> str:
-        """Interpret a user-supplied path against the segments folder."""
+    def resolve(self, path: str, base: str | None = None) -> str:
+        """Interpret a user-supplied path against *base*, the segments folder
+        unless another is given."""
         path = str(path).strip()
         if not path:
             return ""
-        return path if self.is_absolute(path) else self.join(self.root, path)
+        return path if self.is_absolute(path) else self.join(base or self.root, path)
 
     # ── filesystem ───────────────────────────────────────────────────────────
     @abc.abstractmethod

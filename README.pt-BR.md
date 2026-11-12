@@ -10,7 +10,9 @@ registra **o que ele contém**; a avaliação do rótulo com que o clipe chegou,
 **correto** ou **incorreto**, decorre dessa resposta. Os clipes revisados são
 movidos para `correct/`, `incorrect/` ou `uncertain/`, cada revisão é registrada
 em `reviews.csv` (previsão, resultado e os rótulos efetivamente identificados), e
-os rótulos confirmados podem também ser gravados numa tabela de anotações.
+os rótulos confirmados podem também ser gravados numa tabela de anotações. Tudo
+isso é mantido numa única pasta, **`reviau/`**, dentro da pasta de segmentos, e
+nada é gravado ao lado dos próprios clipes.
 
 O reviau foi desenvolvido inicialmente para **análises bioacústicas**, para a
 revisão dos segmentos que métodos de detecção como **template matching**, **busca vetorial** (*vector search*) e **classificadores
@@ -164,10 +166,12 @@ comando precise ser reiniciado. Quando o comando é iniciado sem a pasta
   `--output`, `--labels-file` e `--annotations`. A forma de leitura dos nomes é
   uma configuração da própria pasta; consulte
   [Configurações de leitura](#configurações-de-leitura).
-- **A abertura de uma pasta não grava nada nela.** As pastas de veredito, o
-  registro da revisão e a lista de rótulos são criados quando o primeiro segmento
-  é revisado; assim, uma pasta aberta por engano, por erro de digitação ou um
-  nível acima do pretendido, permanece inalterada.
+- **A abertura de uma pasta não grava nada nela.** A pasta `reviau/` é criada
+  quando o primeiro segmento é revisado; assim, uma pasta aberta por engano, por
+  erro de digitação ou um nível acima do pretendido, permanece inalterada.
+- Uma pasta `reviau/` que contém os resultados de uma revisão não pode ser aberta
+  como pasta de segmentos, pois os seus clipes revisados seriam oferecidos para
+  revisão uma segunda vez; deve-se abrir a pasta que a contém.
 - Uma pasta que não pode ser aberta é recusada com a respectiva explicação, e a
   revisão em andamento não é afetada.
 - **Procurar…** lista as pastas da máquina em que o revisor é executado, que é a
@@ -191,7 +195,7 @@ comando precise ser reiniciado. Quando o comando é iniciado sem a pasta
 | **? Incerto** | Não é possível avaliar o clipe. Ele é arquivado em `uncertain/` e excluído das contagens de corretos e incorretos e da tabela de anotações. |
 | **← Anterior / Próximo →** | Navega entre os segmentos sem registrar decisão. |
 | **Tipo / Mínimo (Hz) / Máximo (Hz) / Limite inferior (dB)** | Redesenham o espectrograma imediatamente, em eixo de frequência mel, linear ou logarítmico. O reprodutor de áudio não é afetado, de modo que a reprodução continua enquanto a visualização é alterada. A visualização é armazenada no navegador. |
-| **✎** | Edita a lista de rótulos: cada botão exibe um **×** que o remove, e o campo abaixo adiciona um novo rótulo. As alterações são salvas no arquivo da lista de rótulos (por padrão, `labels.txt`, na pasta de segmentos). |
+| **✎** | Edita a lista de rótulos: cada botão exibe um **×** que o remove, e o campo abaixo adiciona um novo rótulo. As alterações são salvas no arquivo da lista de rótulos (por padrão, `reviau/labels.txt`). |
 | **⚙** | Abre as [configurações de leitura](#configurações-de-leitura) da pasta: padrão de nome, formato de data e hora, origem do rótulo e nível do rótulo. |
 | **⟳** | Reexamina a pasta, por exemplo após a inclusão de novos segmentos. |
 | **Idioma** | Alterna a interface entre Português e Inglês. |
@@ -225,10 +229,35 @@ Atalhos de teclado: <kbd>←</kbd> e <kbd>→</kbd> navegam entre os segmentos;
 <kbd>1</kbd>…<kbd>9</kbd> marcam ou desmarcam os nove primeiros rótulos;
 <kbd>Espaço</kbd> reproduz ou pausa o áudio.
 
+### A pasta reviau
+
+Tudo o que uma revisão grava é mantido numa única pasta, **`reviau/`**, dentro da
+pasta de segmentos:
+
+```
+segmentos/
+├── PONTO_A/BOAALB/clipe.wav      ← clipes pendentes de revisão
+└── reviau/
+    ├── correct/                  ← clipes revisados, por resultado
+    ├── incorrect/
+    ├── uncertain/
+    ├── reviews.csv               ← o registro da revisão
+    ├── labels.txt                ← a lista de rótulos
+    ├── settings.json             ← as configurações de leitura
+    └── annotations.csv           ← a tabela de anotações, com --annotations
+```
+
+Assim, o conjunto em revisão nunca se mistura com os resultados: a única
+alteração feita nele é a retirada dos clipes revisados, e a exclusão de `reviau/`
+remove tudo o que o reviau gravou. A pasta `reviau/` é excluída da lista de
+pendentes, e todas as demais pastas do conjunto são revisadas, qualquer que seja
+o seu nome. `--output` coloca essa pasta em outro local; consulte
+[Gravação em outro local](#onde-o-clipe-revisado-é-arquivado).
+
 ### A lista de rótulos
 
 Os botões de rótulo provêm de uma lista armazenada em **`labels.txt`**, na pasta
-de segmentos, com um rótulo por linha. Na primeira vez que um conjunto é aberto,
+`reviau/`, com um rótulo por linha. Na primeira vez que um conjunto é aberto,
 a lista é formada pelos rótulos que o conjunto já utiliza, e o arquivo é gravado
 quando o primeiro segmento é revisado. A partir de então, o arquivo constitui a
 lista, que pode ser editada pela interface ou manualmente (linhas em branco e
@@ -241,13 +270,13 @@ conste ou não da lista, e um nome digitado no campo é acrescentado à lista e
 selecionado para o segmento em exibição.
 
 `--labels-file` armazena a lista em outro local. Um caminho relativo é resolvido
-dentro de cada pasta de segmentos; um caminho absoluto, como `~/classes.txt`,
-fornece a mesma lista a todas as pastas abertas.
+dentro da pasta `reviau/`; um caminho absoluto, como `~/classes.txt`, fornece a
+mesma lista a todas as pastas abertas.
 
 ### Onde o clipe revisado é arquivado
 
-Um clipe revisado é arquivado sob o seu **resultado**, seguido do caminho que
-tinha, incluindo a pasta do rótulo **previsto**. Cada pasta responde, portanto, a
+Um clipe revisado é arquivado na pasta `reviau/`, sob o seu **resultado**,
+seguido do caminho que tinha, incluindo a pasta do rótulo **previsto**. Cada pasta responde, portanto, a
 uma única pergunta: `incorrect/PONTO_A/BOAALB/` contém exatamente os clipes que o
 modelo rotulou incorretamente como BOAALB, de modo que o número de arquivos em
 cada pasta fornece a precisão daquela classe. Os rótulos acrescentados durante a
@@ -256,12 +285,12 @@ pastas sem consultar o registro:
 
 ```
 PONTO_A/BOAALB/clipe.wav
-   ├── ✔ Correto                   →  correct/PONTO_A/BOAALB/clipe.wav
-   ├── ✔ Correto, + PHYLUT         →  correct/PONTO_A/BOAALB/clipe_PHYLUT.wav
-   ├── ✘ Incorreto, TURDRU         →  incorrect/PONTO_A/BOAALB/clipe_TURDRU.wav
-   ├── ✘ Incorreto, TURDRU+PHYLUT  →  incorrect/PONTO_A/BOAALB/clipe_TURDRU_PHYLUT.wav
-   ├── ✘ Incorreto, nenhum         →  incorrect/PONTO_A/BOAALB/clipe.wav
-   └── ? Incerto                   →  uncertain/PONTO_A/BOAALB/clipe.wav
+   ├── ✔ Correto                   →  reviau/correct/PONTO_A/BOAALB/clipe.wav
+   ├── ✔ Correto, + PHYLUT         →  reviau/correct/PONTO_A/BOAALB/clipe_PHYLUT.wav
+   ├── ✘ Incorreto, TURDRU         →  reviau/incorrect/PONTO_A/BOAALB/clipe_TURDRU.wav
+   ├── ✘ Incorreto, TURDRU+PHYLUT  →  reviau/incorrect/PONTO_A/BOAALB/clipe_TURDRU_PHYLUT.wav
+   ├── ✘ Incorreto, nenhum         →  reviau/incorrect/PONTO_A/BOAALB/clipe.wav
+   └── ? Incerto                   →  reviau/uncertain/PONTO_A/BOAALB/clipe.wav
 ```
 
 - O nome do arquivo **recebe cada rótulo acrescentado além da previsão**, na
@@ -285,13 +314,13 @@ PONTO_A/BOAALB/clipe.wav
   a árvore de segmentos pendentes diminui à medida que a revisão avança. Uma pasta
   que ainda contenha qualquer item, seja um clipe pendente ou outro arquivo, é
   preservada, e a pasta de segmentos em si nunca é removida.
-- Clipes que já se encontram em `correct/`, `incorrect/`, `uncertain/` ou
-  `labelled/` são excluídos da lista de pendentes, de modo que a revisão pode ser
-  distribuída em várias sessões.
+- Clipes já arquivados em `reviau/` são excluídos da lista de pendentes, de modo
+  que a revisão pode ser distribuída em várias sessões.
 
-**Gravação em outro local.** `--output` (ou `-o`) cria as pastas de veredito e o
-registro da revisão numa pasta escolhida pelo revisor, em vez da pasta de
-segmentos, mantendo inalterado o conjunto em revisão:
+**Gravação em outro local.** `--output` (ou `-o`) substitui a pasta `reviau/`
+por uma pasta escolhida pelo revisor, por exemplo em outro disco. As pastas de
+veredito, o registro da revisão, a lista de rótulos, as configurações de leitura
+e a tabela de anotações são todos gravados nela:
 
 ```bash
 reviau /dados/segmentos --output /dados/revisados
@@ -299,21 +328,21 @@ reviau /dados/segmentos --output /dados/revisados
 
 Um caminho relativo é resolvido a partir da pasta de segmentos (`-o revisados`
 corresponde a `/dados/segmentos/revisados/`), um caminho absoluto é utilizado tal
-como informado, e, via SSH, o caminho refere-se à máquina remota. A tabela de
-anotações é gravada na mesma pasta, salvo indicação diferente em
-`--annotations-path`. Para retomar uma revisão, deve-se informar novamente o
-mesmo `--output`: é nessa pasta que são feitas as contagens de segmentos já
-revisados, e os clipes já gravados nela nunca retornam à lista de pendentes.
+como informado, e, via SSH, o caminho refere-se à máquina remota. Para retomar
+uma revisão, deve-se informar novamente o mesmo `--output`: é nessa pasta que são
+feitas as contagens de segmentos já revisados, e os clipes já gravados nela nunca
+retornam à lista de pendentes. Como a opção se aplica a todas as pastas abertas
+durante a sessão, um `--output` absoluto destina-se à revisão de um único
+conjunto; as pastas abertas com ele compartilham uma única pasta de resultados.
 
 ### O registro da revisão
 
-Cada revisão acrescenta uma linha a **`reviews.csv`**, ao lado das pastas de
-veredito. O registro é sempre gravado e constitui o histórico da revisão:
+Cada revisão acrescenta uma linha a **`reviews.csv`**, na pasta `reviau/`. O registro é sempre gravado e constitui o histórico da revisão:
 
 | Coluna | Conteúdo |
 | --- | --- |
 | `reviewed_at` | Data e hora da revisão, com o fuso horário |
-| `source`, `destination` | O local original do clipe, relativo à pasta de segmentos, e o novo local, relativo à pasta de saída |
+| `source`, `destination` | O local original do clipe, relativo à pasta de segmentos, e o novo local, relativo à pasta `reviau/` |
 | `predicted`, `score` | O rótulo com que o clipe chegou e a pontuação indicada no seu nome |
 | `outcome` | `correct`, `incorrect`, `uncertain` ou `labelled` |
 | `labels` | Os rótulos identificados pelo revisor no clipe, separados por `;`; vazio quando o clipe não contém nenhum rótulo da lista |
@@ -329,7 +358,7 @@ arquivado sem a linha correspondente.
 ### A tabela de anotações
 
 Com `--annotations`, cada rótulo que um segmento **comprovadamente contém** é
-acrescentado a um arquivo CSV com as colunas `site, file, label, start_time,
+acrescentado a `annotations.csv`, na pasta `reviau/`, com as colunas `site, file, label, start_time,
 end_time`, com uma linha por rótulo; assim, um segmento com duas espécies gera
 duas linhas. Uma previsão rejeitada nunca consta da tabela, tampouco segmentos
 marcados como incertos ou sem nenhum rótulo da lista. Os tempos indicam a posição
@@ -353,7 +382,7 @@ acumulam na mesma tabela.
 A forma como os nomes de arquivo e as pastas de um conjunto são lidos é uma
 característica do conjunto; por isso, é definida por pasta, no botão **⚙** ao
 lado da caixa de pasta, e não na linha de comando. As configurações são salvas em
-**`reviau.json`**, na pasta de segmentos, de modo que a pasta é reaberta com as
+**`settings.json`**, na pasta `reviau/`, de modo que a pasta é reaberta com as
 suas próprias configurações em qualquer máquina e em qualquer navegador. Assim
 como a lista de rótulos, o arquivo é gravado apenas quando as configurações são
 aplicadas, e nunca quando a pasta é simplesmente aberta.
@@ -471,8 +500,9 @@ uma chave nem um agente, a senha é lida da variável de ambiente
 registrada no histórico do terminal. Uma chave de host desconhecida é recusada,
 salvo se `--accept-new-host-key` for informado.
 
-Nada é gravado fora da pasta de segmentos e da pasta de saída, e nenhum clipe é
-apagado: os arquivos são apenas movidos dentro dessas pastas.
+Na máquina remota, nada é gravado fora da pasta `reviau/` (ou da pasta de
+`--output`), e nenhum clipe é apagado: os clipes revisados são apenas movidos da
+pasta de segmentos para ela.
 
 ---
 
@@ -523,17 +553,17 @@ reviau [SEGMENTOS] [OPÇÕES]
 
   -l, --lang TEXT               Idioma inicial da interface: en, pt-BR  [padrão: en]
       --labels-file TEXT        Local da lista de rótulos, um rótulo por linha.
-                                Caminhos relativos ficam dentro de cada pasta de
-                                segmentos; um caminho absoluto compartilha uma lista
-                                entre as pastas  [padrão: <SEGMENTOS>/labels.txt]
+                                Caminhos relativos ficam dentro da pasta reviau; um
+                                caminho absoluto compartilha uma lista entre as
+                                pastas  [padrão: <saída>/labels.txt]
       --no-multi-label          Limita cada segmento a um rótulo (por padrão, um
                                 segmento pode receber vários rótulos)
       --annotations             Grava também a tabela de rótulos confirmados
       --annotations-path TEXT   Local da tabela  [padrão: <saída>/annotations.csv]
 
-  -o, --output TEXT             Pasta em que os segmentos revisados e o
-                                reviews.csv são gravados
-                                [padrão: a própria pasta de segmentos]
+  -o, --output TEXT             Pasta em que os segmentos revisados, o reviews.csv,
+                                o labels.txt e o settings.json são gravados
+                                [padrão: <SEGMENTOS>/reviau]
 
       --host TEXT               Endereço de vinculação  [padrão: 127.0.0.1]
   -p, --port INTEGER            Porta  [padrão: 8765]

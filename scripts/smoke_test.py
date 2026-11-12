@@ -86,9 +86,12 @@ def main() -> int:
             assert image.startswith(b"\x89PNG"), image[:16]
 
             call("/api/review", {"relpath": state["segment"]["relpath"], "labels": ["BOAALB"]})
-            filed = list((segments / "correct").rglob("*.wav"))
-            assert filed, "the reviewed clip was not filed under correct/"
-            assert (segments / "reviews.csv").is_file(), "reviews.csv was not written"
+            results = segments / "reviau"
+            filed = list((results / "correct").rglob("*.wav"))
+            assert filed, "the reviewed clip was not filed under reviau/correct/"
+            assert (results / "reviews.csv").is_file(), "reviau/reviews.csv was not written"
+            beside = sorted(p.name for p in segments.iterdir())
+            assert beside == ["reviau"], f"written beside the clips: {beside}"
         finally:
             server.terminate()
             try:

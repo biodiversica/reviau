@@ -30,12 +30,12 @@ class LocalBackend(Backend):
     def is_absolute(self, path: str) -> bool:
         return os.path.isabs(os.path.expanduser(path))
 
-    def resolve(self, path: str) -> str:
+    def resolve(self, path: str, base: str | None = None) -> str:
         path = str(path).strip()
         if not path:
             return ""
         path = os.path.expanduser(path)
-        return path if os.path.isabs(path) else os.path.join(self.root, path)
+        return path if os.path.isabs(path) else os.path.join(base or self.root, path)
 
     @property
     def sep(self) -> str:

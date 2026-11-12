@@ -103,7 +103,7 @@
   },
   "cli": {
     "folder": "Segments folder",
-    "output": "Reviewed to",
+    "output": "Results folder",
     "pending": "Pending review",
     "already_correct": "Already correct",
     "already_incorrect": "Already incorrect",
@@ -139,7 +139,7 @@
   "reading": {
     "button": "Reading settings: how this folder's file names and folders are read",
     "title": "Reading settings",
-    "intro": "These settings describe how the file names and folders of this collection are read. They apply to the open folder only and are saved in reviau.json in the segments folder.",
+    "intro": "These settings describe how the file names and folders of this collection are read. They apply to the open folder only and are saved in settings.json, in its reviau folder.",
     "pattern": "Filename pattern",
     "preset_default": "Default: [site]_YYYYMMDD_HHMMSS_[start]_[end]_*",
     "preset_vector": "Vector search: SITE_YYYYMMDD_HHMMSS_START-ENDs_SCORE_LABEL",
@@ -163,7 +163,7 @@
     "col_date": "Date",
     "col_window": "Window",
     "col_score": "Score",
-    "saved_in": "The settings are saved in reviau.json and the folder is reopened.",
+    "saved_in": "The settings are saved in reviau/settings.json and the folder is reopened.",
     "apply": "Apply"
   },
   "browse": {

@@ -10,6 +10,8 @@ arrived with is **correct** or **incorrect** is derived from that answer.
 Reviewed clips are moved into `correct/`, `incorrect/` or `uncertain/`, every
 review is recorded in `reviews.csv` (prediction, outcome and the labels actually
 identified), and the confirmed labels may also be written to an annotation table.
+All of this is kept in a single **`reviau/`** folder inside the segments folder,
+and nothing is written beside the clips themselves.
 
 reviau was designed primarily for **bioacoustic analysis**, to review the
 segments that detection methods such as **template matching**, **vector
@@ -161,10 +163,12 @@ folder, the page displays only the folder box.
 - Every folder opened receives the options with which the command was started,
   such as `--output`, `--labels-file` and `--annotations`. How its names are
   read is the folder's own setting; see [Reading settings](#reading-settings).
-- **Opening a folder does not write to it.** The verdict folders, the review log
-  and the label list are created when the first segment is reviewed, so a folder
-  opened by mistake, through a typing error or one level too high, is left
-  unchanged.
+- **Opening a folder does not write to it.** The `reviau/` folder is created when
+  the first segment is reviewed, so a folder opened by mistake, through a typing
+  error or one level too high, is left unchanged.
+- A `reviau/` folder that holds the results of a review cannot itself be opened
+  as a segments folder, since its reviewed clips would be offered for review a
+  second time; the folder that contains it is opened instead.
 - A folder that cannot be opened is rejected with an explanation, and the review
   in progress is not affected.
 - **Browse…** lists the folders of the machine on which the reviewer runs, which
@@ -188,7 +192,7 @@ folder, the page displays only the folder box.
 | **? Uncertain** | The clip cannot be assessed. It is filed under `uncertain/` and excluded from the correct and incorrect counts and from the annotation table. |
 | **← Previous / Next →** | Move between segments without recording a decision. |
 | **Type / Minimum (Hz) / Maximum (Hz) / Floor (dB)** | Redraw the spectrogram immediately, on a mel, linear or logarithmic frequency axis. The audio player is not affected, so playback continues while the view changes. The view is stored in the browser. |
-| **✎** | Edit the label list: each button displays a **×** that removes it, and the field below adds a new label. Changes are saved to the label list file (`labels.txt` in the segments folder by default). |
+| **✎** | Edit the label list: each button displays a **×** that removes it, and the field below adds a new label. Changes are saved to the label list file (`reviau/labels.txt` by default). |
 | **⚙** | Open the [reading settings](#reading-settings) of the folder: filename pattern, date-time format, label source and label depth. |
 | **⟳** | Rescan the folder, for example after new segments have been added. |
 | **Language** | Switch the interface between English and Português. |
@@ -219,10 +223,35 @@ Keyboard shortcuts: <kbd>←</kbd> and <kbd>→</kbd> move between segments;
 uncertain; <kbd>1</kbd>…<kbd>9</kbd> select or deselect the first nine labels;
 <kbd>Space</kbd> plays or pauses the audio.
 
+### The reviau folder
+
+Everything that a review writes is kept in one folder, **`reviau/`**, inside the
+segments folder:
+
+```
+segments/
+├── PONTO_A/BOAALB/clip.wav       ← clips pending review
+└── reviau/
+    ├── correct/                  ← reviewed clips, by outcome
+    ├── incorrect/
+    ├── uncertain/
+    ├── reviews.csv               ← the review log
+    ├── labels.txt                ← the label list
+    ├── settings.json             ← the reading settings
+    └── annotations.csv           ← the annotation table, with --annotations
+```
+
+The collection under review is therefore never mixed with the results: the only
+change made to it is that reviewed clips are moved out of it, and deleting
+`reviau/` removes everything that reviau wrote. The `reviau/` folder is excluded
+from the pending list, and every other folder of the collection is reviewed,
+whatever it is called. `--output` places this folder elsewhere; see
+[Writing to another location](#where-a-reviewed-clip-is-filed).
+
 ### The label list
 
 The label buttons are taken from a list stored in **`labels.txt`** in the
-segments folder, one label per line. The first time a collection is opened, the
+`reviau/` folder, one label per line. The first time a collection is opened, the
 list is built from the labels the collection already uses, and it is written to
 the file when the first segment is reviewed. From then on, the file is the list;
 it can be edited in the interface or by hand (blank lines and lines beginning
@@ -235,13 +264,13 @@ list, and a name typed into the field is both added to the list and selected for
 the segment on screen.
 
 `--labels-file` stores the list in another location. A relative path is resolved
-inside each segments folder; an absolute path, such as `~/classes.txt`, gives
+inside the `reviau/` folder; an absolute path, such as `~/classes.txt`, gives
 every folder opened the same list.
 
 ### Where a reviewed clip is filed
 
-A reviewed clip is filed under its **outcome**, followed by the path it had,
-including the folder of the **predicted** label. Each folder therefore answers a
+A reviewed clip is filed in the `reviau/` folder under its **outcome**, followed
+by the path it had, including the folder of the **predicted** label. Each folder therefore answers a
 single question: `incorrect/PONTO_A/BOAALB/` contains exactly the clips that the
 model labelled BOAALB incorrectly, so the number of files in each folder gives
 the precision for that class. The labels added during the review are appended to
@@ -249,12 +278,12 @@ the file name, so the folder tree can be read without consulting the log:
 
 ```
 PONTO_A/BOAALB/clip.wav
-   ├── ✔ Correct                  →  correct/PONTO_A/BOAALB/clip.wav
-   ├── ✔ Correct, + PHYLUT        →  correct/PONTO_A/BOAALB/clip_PHYLUT.wav
-   ├── ✘ Incorrect, TURDRU        →  incorrect/PONTO_A/BOAALB/clip_TURDRU.wav
-   ├── ✘ Incorrect, TURDRU+PHYLUT →  incorrect/PONTO_A/BOAALB/clip_TURDRU_PHYLUT.wav
-   ├── ✘ Incorrect, none          →  incorrect/PONTO_A/BOAALB/clip.wav
-   └── ? Uncertain                →  uncertain/PONTO_A/BOAALB/clip.wav
+   ├── ✔ Correct                  →  reviau/correct/PONTO_A/BOAALB/clip.wav
+   ├── ✔ Correct, + PHYLUT        →  reviau/correct/PONTO_A/BOAALB/clip_PHYLUT.wav
+   ├── ✘ Incorrect, TURDRU        →  reviau/incorrect/PONTO_A/BOAALB/clip_TURDRU.wav
+   ├── ✘ Incorrect, TURDRU+PHYLUT →  reviau/incorrect/PONTO_A/BOAALB/clip_TURDRU_PHYLUT.wav
+   ├── ✘ Incorrect, none          →  reviau/incorrect/PONTO_A/BOAALB/clip.wav
+   └── ? Uncertain                →  reviau/uncertain/PONTO_A/BOAALB/clip.wav
 ```
 
 - The file name **receives every label added beyond the prediction**, in the
@@ -277,13 +306,13 @@ PONTO_A/BOAALB/clip.wav
   of pending segments shrinks as the review progresses. A folder that still
   contains anything, whether a pending clip or another file, is preserved, and
   the segments folder itself is never removed.
-- Clips already in `correct/`, `incorrect/`, `uncertain/` or `labelled/` are
-  excluded from the pending list, so a review can be spread over several
-  sessions.
+- Clips already filed in `reviau/` are excluded from the pending list, so a
+  review can be spread over several sessions.
 
-**Writing to another location.** `--output` (or `-o`) places the verdict folders
-and the review log in a folder of the reviewer's choice instead of the segments
-folder, leaving the collection under review unchanged:
+**Writing to another location.** `--output` (or `-o`) replaces the `reviau/`
+folder with a folder of the reviewer's choice, for example on another disk. The
+verdict folders, the review log, the label list, the reading settings and the
+annotation table are all written there:
 
 ```bash
 reviau /data/segments --output /data/reviewed
@@ -291,21 +320,22 @@ reviau /data/segments --output /data/reviewed
 
 A relative path is resolved against the segments folder (`-o reviewed` refers to
 `/data/segments/reviewed/`), an absolute path is used as given, and over SSH the
-path refers to the remote machine. The annotation table is written to the same
-folder unless `--annotations-path` specifies otherwise. To resume a review, the
-same `--output` should be given again: that folder is where the counts of
-segments already reviewed are taken, and clips already written there are never
-returned to the pending list.
+path refers to the remote machine. To resume a review, the same `--output`
+should be given again: that folder is where the counts of segments already
+reviewed are taken, and clips already written there are never returned to the
+pending list. Because the option applies to every folder opened during the
+session, an absolute `--output` is intended for the review of a single
+collection; folders opened with it share one results folder.
 
 ### The review log
 
-Every review adds one row to **`reviews.csv`**, next to the verdict folders. The
+Every review adds one row to **`reviews.csv`**, in the `reviau/` folder. The
 log is always written and constitutes the record of the review:
 
 | Column | Content |
 | --- | --- |
 | `reviewed_at` | Date and time of the review, with the time zone |
-| `source`, `destination` | The original location of the clip, relative to the segments folder, and its new location, relative to the output folder |
+| `source`, `destination` | The original location of the clip, relative to the segments folder, and its new location, relative to the `reviau/` folder |
 | `predicted`, `score` | The label the clip arrived with, and the score given in its name |
 | `outcome` | `correct`, `incorrect`, `uncertain` or `labelled` |
 | `labels` | The labels the reviewer identified in the clip, separated by `;`; empty when it contains no label from the list |
@@ -321,7 +351,7 @@ without a corresponding row.
 ### The annotation table
 
 With `--annotations`, every label that a segment is **confirmed to contain** is
-added to a CSV file with the columns `site, file, label, start_time, end_time`,
+added to `annotations.csv`, in the `reviau/` folder, with the columns `site, file, label, start_time, end_time`,
 one row per label, so a segment containing two species produces two rows. A
 rejected prediction never appears in the table, nor do segments marked uncertain
 or found to contain no label from the list. The times give the position of the
@@ -342,8 +372,8 @@ so reviews spread over several sessions accumulate in the same table.
 
 How the file names and folders of a collection are read is a property of the
 collection, so it is set per folder, from the **⚙** button next to the folder box,
-rather than on the command line. The settings are saved in **`reviau.json`** in
-the segments folder, so a folder reopens with its own settings on any machine
+rather than on the command line. The settings are saved in **`settings.json`**
+in the `reviau/` folder, so a folder reopens with its own settings on any machine
 and in any browser. As with the label list, the file is written only when
 settings are applied, never when a folder is merely opened.
 
@@ -454,8 +484,9 @@ used, a password is read from the `REVIAU_SSH_PASSWORD` environment variable; it
 is never accepted on the command line, where it would be recorded in the shell
 history. An unknown host key is rejected unless `--accept-new-host-key` is given.
 
-Nothing is written outside the segments folder and the output folder, and no
-clip is ever deleted: files are only moved within those folders.
+On the remote machine, nothing is written outside the `reviau/` folder (or the
+`--output` folder), and no clip is ever deleted: reviewed clips are only moved
+from the segments folder into it.
 
 ---
 
@@ -505,16 +536,17 @@ reviau [SEGMENTS] [OPTIONS]
 
   -l, --lang TEXT               Interface language at start-up: en, pt-BR  [default: en]
       --labels-file TEXT        Location of the label list, one label per line.
-                                Relative paths are inside each segments folder; an
+                                Relative paths are inside the reviau folder; an
                                 absolute path shares one list between folders
-                                [default: <SEGMENTS>/labels.txt]
+                                [default: <output>/labels.txt]
       --no-multi-label          Restrict each segment to one label (several labels
                                 per segment are allowed by default)
       --annotations             Also write the annotation table of confirmed labels
       --annotations-path TEXT   Location of the table  [default: <output>/annotations.csv]
 
-  -o, --output TEXT             Folder to which the reviewed segments and
-                                reviews.csv are written  [default: the segments folder]
+  -o, --output TEXT             Folder in which the reviewed segments, reviews.csv,
+                                labels.txt and settings.json are written
+                                [default: <SEGMENTS>/reviau]
 
       --host TEXT               Address to bind  [default: 127.0.0.1]
   -p, --port INTEGER            Port  [default: 8765]

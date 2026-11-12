@@ -13,6 +13,13 @@ from reviau.storage import LocalBackend
 from reviau.workspace import Workspace
 
 
+def write_text(path: Path, text: str) -> None:
+    """Write *text* as UTF-8, making the folders it goes in — the work folder
+    a test seeds does not exist until reviau writes in it."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
 def write_wav(path: Path, seconds: float = 0.5, sr: int = 22050) -> None:
     """A short silent WAV, written without an audio stack.
 

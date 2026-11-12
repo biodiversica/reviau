@@ -1,10 +1,11 @@
-"""Reading settings: per folder, validated, kept in reviau.json, previewed."""
+"""Reading settings: per folder, validated, kept in reviau/settings.json, previewed."""
 
 import json
 
 import pytest
-from conftest import TEMPLATE, make_workspace
+from conftest import TEMPLATE, make_workspace, write_text
 
+from reviau.config import WORK_DIR
 from reviau.reading import READING_FILE, Reading, ReadingError, pattern_has_label
 
 
@@ -46,7 +47,7 @@ def test_a_template_is_accepted():
 
 # ── kept per folder ──────────────────────────────────────────────────────────
 def test_a_folder_opens_with_the_settings_it_stores(label_on_top_dir):
-    (label_on_top_dir / READING_FILE).write_text(json.dumps({"label_depth": 1}))
+    write_text(label_on_top_dir / WORK_DIR / READING_FILE, json.dumps({"label_depth": 1}))
     workspace = make_workspace(label_on_top_dir)
     assert workspace.session.config.label_depth == 1
     assert workspace.session.label_choices() == ["BOAALB", "PHYLUT"]
@@ -55,7 +56,7 @@ def test_a_folder_opens_with_the_settings_it_stores(label_on_top_dir):
 def test_without_a_settings_file_the_defaults_are_used(segments_dir):
     workspace = make_workspace(segments_dir)
     assert workspace.session.config.reading == Reading()
-    assert not (segments_dir / READING_FILE).exists()     # opening writes nothing
+    assert not (segments_dir / WORK_DIR).exists()     # opening writes nothing
 
 
 def test_applying_settings_saves_them_and_rereads_the_folder(label_on_top_dir):
@@ -63,7 +64,7 @@ def test_applying_settings_saves_them_and_rereads_the_folder(label_on_top_dir):
     assert workspace.session.label_choices() == ["PHYLUT", "POCA", "PONTO A"]
     workspace.apply_reading(Reading(label_depth=1))
     assert workspace.session.label_choices() == ["BOAALB", "PHYLUT"]
-    stored = json.loads((label_on_top_dir / READING_FILE).read_text())
+    stored = json.loads((label_on_top_dir / WORK_DIR / READING_FILE).read_text())
     assert stored["label_depth"] == 1
     # The next session opens the folder with them.
     assert make_workspace(label_on_top_dir).session.config.label_depth == 1
@@ -79,7 +80,7 @@ def test_each_folder_keeps_its_own_settings(label_on_top_dir, segments_dir):
 
 
 def test_a_broken_settings_file_opens_with_the_defaults_and_says_so(segments_dir):
-    (segments_dir / READING_FILE).write_text("{ not json")
+    write_text(segments_dir / WORK_DIR / READING_FILE, "{ not json")
     workspace = make_workspace(segments_dir)
     assert workspace.session.config.reading == Reading()
     assert READING_FILE in workspace.reading_error
@@ -100,4 +101,4 @@ def test_unusable_settings_change_nothing(segments_dir):
     with pytest.raises(ReadingError):
         workspace.apply_reading(Reading(filename_pattern="(unclosed"))
     assert workspace.session is current
-    assert not (segments_dir / READING_FILE).exists()
+    assert not (segments_dir / WORK_DIR).exists()

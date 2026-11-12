@@ -13,7 +13,7 @@ from .annotations import (
     SourceManifest,
     segment_bounds,
 )
-from .config import REVIEW_LOG, ReviewConfig
+from .config import REVIEW_LOG, WORK_DIR, ReviewConfig, work_folder
 from .labels import LabelStore
 from .naming import nfc, slug, split_labels, with_labels
 from .outcome import OUTCOMES, Outcome, decide
@@ -58,11 +58,10 @@ class ReviewSession:
     def __init__(self, backend: Backend, config: ReviewConfig) -> None:
         self.backend = backend
         self.config = config
-        #: Where the verdict folders live — the segments folder unless --output
-        #: says otherwise. Resolved once, so every path built from it agrees.
-        self.output_root = (
-            backend.resolve(config.output) if str(config.output).strip() else backend.root
-        )
+        #: The work folder: everything reviau writes goes here — ``reviau/``
+        #: inside the segments folder unless --output names another. Resolved
+        #: once, so every path built from it agrees.
+        self.output_root = work_folder(backend, config.output)
         self.parser = parser_for(config.reading)
         self._lock = threading.RLock()
         # Nothing is written on opening — no verdict folders, no label list:
@@ -82,39 +81,31 @@ class ReviewSession:
         self.rescan()
         self.labels = LabelStore(
             backend,
-            backend.resolve(config.labels_file) if config.labels_file else "",
+            backend.resolve(config.labels_file, self.output_root),
             discovered=self.discovered_labels(),
         )
 
     # ── setup ────────────────────────────────────────────────────────────────
     def _annotations_path(self) -> str:
-        if not self.config.save_annotations:
-            return self.backend.resolve(self.config.annotations_path)
-        raw = self.config.annotations_path.strip()
-        if not raw:
-            # A written table is reviewed output, so it goes where the verdict
-            # folders go; a path given by hand is still read as documented,
-            # against the segments folder.
-            return self.backend.join(self.output_root, "annotations.csv")
-        return self.backend.resolve(raw)
+        """The annotation table: in the work folder, like everything written."""
+        raw = self.config.annotations_path.strip() or "annotations.csv"
+        return self.backend.resolve(raw, self.output_root)
 
     # ── the pending list ─────────────────────────────────────────────────────
     def verdict_root(self, name: str) -> str:
-        """Absolute path of one verdict folder, under wherever the output goes."""
+        """Absolute path of one verdict folder, in the work folder."""
         return self.backend.join(self.output_root, name)
 
     def _skip_roots(self) -> list[str]:
-        """Folders excluded from review — the verdict folders.
+        """Folders excluded from review — work folders, and nothing else.
 
-        Taken under the segments folder as well as under ``--output``: a review
-        writing elsewhere must still skip the verdict folders of an earlier run
-        that wrote in place, and an output folder nested inside the segments
-        folder must not hand its own clips back as pending.
+        The work folder in use, and ``reviau/`` in the segments folder as well:
+        a review writing elsewhere with ``--output`` must still skip the clips
+        an earlier run filed in the default place. The collection's own folders
+        are all reviewed, whatever they are called — a site or class folder
+        named ``correct`` is just a folder.
         """
-        roots = {self.backend.root, self.output_root}
-        return sorted(
-            self.backend.join(root, name) for root in roots for name in OUTCOMES
-        )
+        return sorted({self.output_root, self.backend.join(self.backend.root, WORK_DIR)})
 
     def collect(self) -> list[str]:
         skip = self._skip_roots()

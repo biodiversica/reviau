@@ -103,7 +103,7 @@
   },
   "cli": {
     "folder": "Pasta de segmentos",
-    "output": "Revisados vão para",
+    "output": "Pasta de resultados",
     "pending": "Pendentes de revisão",
     "already_correct": "Já corretos",
     "already_incorrect": "Já incorretos",
@@ -139,7 +139,7 @@
   "reading": {
     "button": "Configurações de leitura: como os nomes de arquivo e as pastas desta pasta são lidos",
     "title": "Configurações de leitura",
-    "intro": "Estas configurações descrevem como os nomes de arquivo e as pastas deste conjunto são lidos. Elas se aplicam apenas à pasta aberta e são salvas em reviau.json, na pasta de segmentos.",
+    "intro": "Estas configurações descrevem como os nomes de arquivo e as pastas deste conjunto são lidos. Elas se aplicam apenas à pasta aberta e são salvas em settings.json, na sua pasta reviau.",
     "pattern": "Padrão de nome",
     "preset_default": "Padrão: [site]_YYYYMMDD_HHMMSS_[start]_[end]_*",
     "preset_vector": "Busca vetorial: PONTO_AAAAMMDD_HHMMSS_INÍCIO-FIMs_PONTUAÇÃO_RÓTULO",
@@ -163,7 +163,7 @@
     "col_date": "Data",
     "col_window": "Janela",
     "col_score": "Pontuação",
-    "saved_in": "As configurações são salvas em reviau.json e a pasta é reaberta.",
+    "saved_in": "As configurações são salvas em reviau/settings.json e a pasta é reaberta.",
     "apply": "Aplicar"
   },
   "browse": {

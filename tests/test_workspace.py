@@ -42,6 +42,21 @@ def test_a_folder_that_cannot_be_opened_leaves_the_review_alone(segments_dir, ba
     assert workspace.session is current
 
 
+def test_the_work_folder_itself_is_not_opened_for_review(segments_dir):
+    """Its verdict folders would come back as pending and be filed again."""
+    workspace = make_workspace(segments_dir)
+    workspace.session.review([workspace.session.view().label])
+    with pytest.raises(OpenError, match="segments folder that contains it"):
+        workspace.open(str(segments_dir / "reviau"))
+
+
+def test_a_folder_named_reviau_that_holds_only_clips_opens(tmp_path):
+    write_wav(tmp_path / "reviau" / "BOAALB" / "S_20240101_000000_0.0_5.0.wav")
+    workspace = make_workspace()
+    workspace.open(str(tmp_path / "reviau"))
+    assert len(workspace.session.segments) == 1
+
+
 def test_a_file_is_not_a_folder(segments_dir):
     with pytest.raises(OpenError, match="not a folder"):
         make_workspace().open(str(segments_dir / "segment_sources.csv"))

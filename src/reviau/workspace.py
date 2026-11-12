@@ -4,7 +4,8 @@ The server starts with a folder or without one; either way the reviewer can
 open any folder — local, or ``ssh://`` — from the browser, and switch to another
 without restarting. Every folder opened gets the options the command line was
 started with (output folder, annotations, SSH keys, …), and its own reading
-settings — filename pattern, label source and depth — from ``reviau.json``.
+settings — filename pattern, label source and depth — from the
+``settings.json`` in its work folder.
 """
 
 from __future__ import annotations
@@ -15,8 +16,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from .config import ReviewConfig
-from .reading import Reading, ReadingError
+from .config import REVIEW_LOG, WORK_DIR, ReviewConfig, work_folder
+from .reading import READING_FILE, Reading, ReadingError
 from .reading import load as load_reading
 from .reading import save as save_reading
 from .review import ReviewSession
@@ -46,14 +47,14 @@ class Workspace:
         self._lock = threading.Lock()
         self.session: ReviewSession | None = None
         #: Why the open folder's reading settings are not the ones it stores,
-        #: if they are not — an unreadable reviau.json, or one not saved.
+        #: if they are not — an unreadable settings.json, or one not saved.
         self.reading_error = ""
 
     def open(self, spec: str, reading: Reading | None = None) -> Opened:
         """Open *spec* for review, replacing whatever was open.
 
-        The folder is read with its own settings from ``reviau.json``, or with
-        *reading* when one is given. Nothing changes unless the new folder
+        The folder is read with its own settings from its ``settings.json``, or
+        with *reading* when one is given. Nothing changes unless the new folder
         opens cleanly: a typo leaves the current review exactly where it was.
         """
         spec = str(spec or "").strip()
@@ -66,9 +67,14 @@ class Workspace:
         try:
             if not backend.isdir(backend.root):
                 raise OpenError(f"{backend.display} is not a folder.")
+            if _is_work_folder(backend):
+                raise OpenError(
+                    f"{backend.display} is the folder in which reviau keeps its results. "
+                    "Open the segments folder that contains it."
+                )
             problem = ""
             if reading is None:
-                reading, problem = load_reading(backend)
+                reading, problem = load_reading(backend, work_folder(backend, self.config.output))
             session = ReviewSession(
                 backend, replace(self.config, segments=spec, **reading.as_dict())
             )
@@ -86,8 +92,8 @@ class Workspace:
     def apply_reading(self, reading: Reading) -> Opened:
         """Read the open folder with *reading* from now on, and keep it there.
 
-        The settings are saved to the folder's ``reviau.json`` and the folder is
-        reopened with them. A folder that cannot be written to still gets them
+        The settings are saved to the folder's ``settings.json`` and the folder
+        is reopened with them. A folder that cannot be written to still gets them
         for this session, and :attr:`reading_error` says they were not kept.
         """
         session = self.session
@@ -95,7 +101,7 @@ class Workspace:
             raise OpenError("No segments folder is open.")
         reading = reading.validated()            # ReadingError when unusable
         try:
-            save_reading(session.backend, reading)
+            save_reading(session.backend, session.output_root, reading)
             problem = ""
         except Exception as exc:  # noqa: BLE001 - reported, the session carries on
             problem = (f"The settings could not be saved ({exc}); "
@@ -109,6 +115,18 @@ class Workspace:
             previous, self.session = self.session, None
         if previous is not None:
             previous.backend.close()
+
+
+def _is_work_folder(backend: Backend) -> bool:
+    """Whether the folder opened is a work folder rather than segments.
+
+    Reviewed as segments, its verdict folders would come back as pending clips
+    and be filed a second time, inside a work folder of their own.
+    """
+    root = backend.root
+    if backend.basename(root) != WORK_DIR:
+        return False
+    return any(backend.exists(backend.join(root, name)) for name in (REVIEW_LOG, READING_FILE))
 
 
 # ── browsing for a folder ────────────────────────────────────────────────────

@@ -3,9 +3,10 @@
 A filename pattern, a date-time format, where the label comes from and which
 folder level carries it describe one collection, not the reviewer: two folders
 opened in one session may be named in two different ways. They are therefore
-set from the GUI and kept beside the segments, in ``reviau.json``, so a folder
-reopens with its own settings from any machine or browser. Like the label list,
-the file is written only when settings are applied, never on opening.
+set from the GUI and kept with the folder, in ``settings.json`` in its work
+folder (``reviau/``), so a folder reopens with its own settings from any machine
+or browser. Like the label list, the file is written only when settings are
+applied, never on opening.
 """
 
 from __future__ import annotations
@@ -23,7 +24,7 @@ from .naming import (
 )
 
 #: The settings file, in the segments folder.
-READING_FILE = "reviau.json"
+READING_FILE = "settings.json"
 
 #: "auto" reads the label from the file name when the pattern captures one,
 #: and from the folder otherwise.
@@ -105,14 +106,15 @@ class Reading:
         )
 
 
-def load(backend) -> tuple[Reading, str]:
+def load(backend, folder: str) -> tuple[Reading, str]:
     """The folder's settings, and an error message when its file is unusable.
 
     A missing file means the defaults. A file that cannot be read or holds
     settings that do not work also falls back to the defaults — a folder must
     always open — and the message says why, so the GUI can report it.
+    *folder* is the work folder the file is kept in.
     """
-    path = backend.join(backend.root, READING_FILE)
+    path = backend.join(folder, READING_FILE)
     try:
         text = backend.read_text(path)
     except Exception as exc:  # noqa: BLE001
@@ -125,9 +127,9 @@ def load(backend) -> tuple[Reading, str]:
         return Reading(), f"{READING_FILE} is not valid ({exc}); the default settings are in use."
 
 
-def save(backend, reading: Reading) -> str:
-    """Write the folder's settings; returns the path written."""
-    path = backend.join(backend.root, READING_FILE)
+def save(backend, folder: str, reading: Reading) -> str:
+    """Write the folder's settings into its work *folder*; returns the path."""
+    path = backend.join(folder, READING_FILE)
     body = json.dumps(reading.as_dict(), indent=2, ensure_ascii=False) + "\n"
     backend.write_bytes(path, body.encode("utf-8"))
     return path

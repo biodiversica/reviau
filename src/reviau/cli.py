@@ -28,10 +28,14 @@ cli = typer.Typer(
         "look at its spectrogram, and say what is in it. Whether its label was "
         "correct or incorrect follows from that, and every review is logged to "
         "reviews.csv.\n\n"
+        "Everything reviau writes goes in one folder, reviau/, inside the segments "
+        "folder: the reviewed clips under correct/, incorrect/ and uncertain/, the "
+        "review log, the label list and the reading settings. Nothing is written "
+        "beside the clips themselves.\n\n"
         "By default a segment's label is the folder it sits in, and its file name "
         "is read as [site]_[YYYYMMDD]_[HHMMSS]_[start]_[end]_*. How each folder's "
         "names are read is set in the browser, under Reading settings, and kept "
-        "in that folder's reviau.json.\n\n"
+        "in that folder's reviau/settings.json.\n\n"
         "An SSH password, where keys or an agent cannot be used, is read from "
         "the REVIAU_SSH_PASSWORD environment variable.\n\n"
         "SEGMENTS may be a local folder or a remote one over SSH, and may be left "
@@ -109,7 +113,7 @@ def _summary(session: ReviewSession | None, config: ReviewConfig, t) -> str:
         annotations = t("cli.on")
     else:
         annotations = t("cli.off")
-    # How names are read is the open folder's own setting, from its reviau.json.
+    # How names are read is the open folder's own setting, from its settings.json.
     reading = [] if session is None else [
         (t("cli.label_from"), session.config.reading.resolved_label_from),
         *([(t("cli.label_depth"), str(session.config.label_depth))]
@@ -153,8 +157,8 @@ def review(
     labels_file: str | None = typer.Option(
         None, "--labels-file",
         help="Where the editable label list is kept, one label per line. Relative "
-             "paths are inside each segments folder; an absolute path shares one "
-             "list between folders.  [default: <SEGMENTS>/labels.txt]",
+             "paths are inside the reviau folder; an absolute path shares one "
+             "list between folders.  [default: <output>/labels.txt]",
     ),
     annotations: bool = typer.Option(
         False, "--annotations/--no-annotations",
@@ -163,14 +167,14 @@ def review(
     ),
     annotations_path: str = typer.Option(
         "", "--annotations-path",
-        help="Where that table lives. Relative paths are inside the segments folder. "
+        help="Where that table lives. Relative paths are inside the reviau folder. "
              "[default: <output>/annotations.csv]",
     ),
     output: str = typer.Option(
         "", "--output", "-o",
-        help="Where the reviewed segments are written: the folder holding "
-             "correct/, incorrect/, uncertain/ and reviews.csv. Relative paths are inside "
-             "the segments folder.  [default: the segments folder itself]",
+        help="The folder reviau writes in: correct/, incorrect/, uncertain/, "
+             "reviews.csv, labels.txt and settings.json. Relative paths are inside "
+             "the segments folder.  [default: <SEGMENTS>/reviau]",
     ),
     host: str = typer.Option(
         "127.0.0.1", "--host",
