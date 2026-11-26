@@ -48,7 +48,7 @@ reviau = "reviau.cli:main"
 packages = ["src/reviau"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/reviau", "tests", "README.md", "README.pt-BR.md", "LICENSE"]
+include = ["src/reviau", "tests", "docs", "README.md", "README.pt-BR.md", "LICENSE"]
 
 [dependency-groups]
 dev = [

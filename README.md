@@ -1,17 +1,17 @@
 # (| reviau |)
 
-[Português (Brasil) →](https://github.com/biodiversica/reviau/blob/main/README.pt-BR.md)
+*English · [Português (Brasil)](https://github.com/biodiversica/reviau/blob/main/README.pt-BR.md)*
 
-reviau is a tool that provides a **browser interface for
-reviewing a folder of audio segments**. Each clip is presented as a spectrogram,
-together with the information its folder and file name provide. The reviewer
-listens to the clip and records **what it contains**; whether the label it
-arrived with is **correct** or **incorrect** is derived from that answer.
-Reviewed clips are moved into `correct/`, `incorrect/` or `uncertain/`, every
-review is recorded in `reviews.csv` (prediction, outcome and the labels actually
-identified), and the confirmed labels may also be written to an annotation table.
-All of this is kept in a single **`reviau/`** folder inside the segments folder,
-and nothing is written beside the clips themselves.
+reviau is a tool that provides a **browser interface for reviewing a folder of
+audio segments**. Each clip is presented as a spectrogram, together with the
+information its folder and file name provide. The reviewer listens to the clip
+and records **what it contains**; whether the label it arrived with is
+**correct** or **incorrect** is derived from that answer. Reviewed clips are
+moved into `correct/`, `incorrect/` or `uncertain/`, every review is recorded in
+`reviews.csv` (prediction, outcome and the labels actually identified), and the
+confirmed labels may also be written to an annotation table. All of this is kept
+in a single **`reviau/`** folder inside the segments folder, and nothing is
+written beside the clips themselves.
 
 reviau was designed primarily for **bioacoustic analysis**, to review the
 segments that detection methods such as **template matching**, **vector
@@ -22,63 +22,6 @@ produced, including manually cut examples. The segments folder may be
 **local** or **remote over SSH**, and the interface may be served to **another
 machine** on a local network or a Tailscale network. The interface is available
 in **English** and **Português (Brasil)**.
-
----
-
-## How a segment is read
-
-Information about a segment is taken from two independent sources, both of which
-are configurable.
-
-**The folder provides the label.** A collection under review is normally
-organised with one folder per class, so the folder containing a clip is the label
-it currently carries:
-
-```
-segments/
-├── PONTO_A/BOAALB/PONTO_A_20240115_053000_12.0_17.0_det1.wav   → label BOAALB
-├── PONTO_A/PHYLUT/PONTO_A_20240115_061500_3.5_8.5_det2.wav     → label PHYLUT
-└── chuva/POCA_20240116_200000_5.0_10.0_det4.wav                → label chuva
-```
-
-Folders above the label are preserved: `2024/campo/PONTO_A/BOAALB/` labels the
-clip `BOAALB` and retains the three folders above it. A clip placed directly in
-the segments folder has no label.
-
-**Collections with the class folder at the top.** Some collections are organised
-the other way round, with the sites *inside* each class folder. In that case,
-the **label depth** in the [reading settings](#reading-settings) specifies which
-level carries the label, counting down from the segments folder. The folders below that level are read but not retained: they are
-not offered as labels, and a reviewed clip is filed under its label alone, since
-the site and the date are already present in the file name.
-
-```
-segments/                          # label depth 1
-├── BOAALB/PONTO_A/20240115/clip.wav  → label BOAALB; the two folders below are not retained
-├── BOAALB/POCA/clip.wav              → label BOAALB
-└── PHYLUT/clip.wav                   → label PHYLUT (shallower than the depth, still labelled)
-```
-
-**The file name provides the remaining information.** By default it is read as
-
-```
-[site]_[YYYYMMDD]_[HHMMSS]_[start]_[end]_*
-     PONTO_A_20240115_053000_12.0_17.0_det1.wav
-```
-
-- `site` may contain underscores; the match is anchored on the date and time.
-- `start` and `end` give the position of the clip, in seconds, within the
-  recording from which it was cut. Both forms are accepted: `12.0_17.0` and
-  `12.0-17.0s`.
-- `_*` covers any remaining text, which the interface displays as *Other*.
-- Every part after the site is optional, and **a name that matches no part of
-  the pattern can still be reviewed**; the interface simply displays less
-  information about it.
-
-Collections named according to another convention can be described in the
-[reading settings](#reading-settings).
-
----
 
 ## Installation
 
@@ -97,19 +40,6 @@ On macOS and Linux, open a terminal and run:
 curl -LsSf https://github.com/biodiversica/reviau/releases/latest/download/install.sh | sh
 ```
 
-The installer performs the following steps:
-
-1. Installs [uv](https://docs.astral.sh/uv/) into `~/.local/bin` if it is not
-   already present. uv downloads its own Python, so no prior installation is
-   required, and any existing Python installation is left unchanged.
-2. Runs `uv tool install --python 3.12 reviau`, which installs the tool in an
-   isolated environment and adds `reviau` to the PATH.
-
-The command becomes available in terminals opened after the installation. The
-environment variable `REVIAU_PACKAGE` changes what the installer installs (for
-example, a specific version such as `reviau==0.1.0`). To uninstall, run
-`uv tool uninstall reviau`.
-
 **With uv or pip.** reviau is published on PyPI and requires Python 3.10 or
 later:
 
@@ -118,521 +48,40 @@ uv tool install reviau   # as an isolated command-line tool
 pip install reviau       # or with pip, into the current environment
 ```
 
-`uv tool upgrade reviau` upgrades the tool. It can also be run once, without a
-permanent installation, with `uvx reviau /path/to/segments`.
+[Installation](https://github.com/biodiversica/reviau/blob/main/docs/en/installation.md)
+describes what the installer does, upgrading and uninstalling.
 
-The audio libraries (librosa and soundfile) depend on `libsndfile`, which is
-included in their wheels for Linux, macOS and Windows.
-
----
-
-## Usage
+## Quick Start
 
 ```bash
-# Start without a folder and open one from the browser
-reviau
-
-# Open a local folder at start-up, with the interface on this machine
-reviau ~/segments
-
-# Portuguese interface, one label list shared by every folder, an annotation table
-reviau ~/segments --lang pt-BR --labels-file ~/classes.txt --annotations
-
-# Segments on a server, reviewed from another computer
-reviau ssh://user@fieldserver/data/segments
-
-# Serve the interface to the network (local network, Tailscale, …)
-reviau /data/segments --host 0.0.0.0 --port 8765
+reviau                                     # start, and open a folder from the browser
+reviau ~/segments                          # open a local folder at start-up
+reviau ssh://user@fieldserver/data/segments   # segments on a server, over SSH
+reviau ~/segments --lang pt-BR --annotations  # Portuguese interface, with an annotation table
 ```
 
-The command prints a summary and the address to open. With `--host 0.0.0.0` it
-also prints the address that other machines should use.
-
-### Opening a folder
-
-The **folder box** at the top of the page shows which segments folder is under
-review. Typing another path and pressing <kbd>Enter</kbd>, or selecting a folder
-with **Browse…**, opens that folder in place of the current one without
-restarting the command. When the command is started without a `SEGMENTS`
-folder, the page displays only the folder box.
-
-- The folder box accepts the same paths as the command line: a local folder, a
-  path beginning with `~/`, or `ssh://user@host/path` for a remote folder, which
-  is reached with the SSH settings of the command line (`--ssh-key`,
-  `~/.ssh/config`, the SSH agent, and so on).
-- Every folder opened receives the options with which the command was started,
-  such as `--output`, `--labels-file` and `--annotations`. How its names are
-  read is the folder's own setting; see [Reading settings](#reading-settings).
-- **Opening a folder does not write to it.** The `reviau/` folder is created when
-  the first segment is reviewed, so a folder opened by mistake, through a typing
-  error or one level too high, is left unchanged.
-- A `reviau/` folder that holds the results of a review cannot itself be opened
-  as a segments folder, since its reviewed clips would be offered for review a
-  second time; the folder that contains it is opened instead.
-- A folder that cannot be opened is rejected with an explanation, and the review
-  in progress is not affected.
-- **Browse…** lists the folders of the machine on which the reviewer runs, which
-  is the machine that reads the clips; when the interface is served to another
-  computer, this is not the computer running the browser. Folders that contain
-  clips are marked with ♪. Remote `ssh://` folders cannot be browsed and must be
-  typed.
-- Recently opened folders are suggested while typing. This history is stored in
-  the browser.
-- When the filename pattern recognises only some of the names in the folder just
-  opened, a notice below the folder box reports it, together with one name that
-  was not recognised.
-
-### In the browser
-
-| Control | Function |
-| --- | --- |
-| **Label buttons** | Labels for anything *else* present in the clip, or for what the clip actually contains. Each segment starts with no label selected; clicking a label selects it, and clicking it again deselects it. The button of the predicted label is marked **◆ predicted** and cannot be selected: the prediction is assessed with Correct or Incorrect instead. <kbd>1</kbd>…<kbd>9</kbd> select the first nine labels. |
-| **✔ Correct** | The prediction is correct. The segment is saved with the prediction and any selected label, for example a second species vocalising at the same time. The button shows what will be saved: *✔ Correct + PHYLUT*. |
-| **✘ Incorrect** | The prediction is incorrect. The segment is saved with the selected labels, which describe what the clip actually contains, or, if none is selected, as containing no label from the list. The button shows which applies: *✘ Incorrect → TURDRU* or *✘ Incorrect · no label from the list*. |
-| **? Uncertain** | The clip cannot be assessed. It is filed under `uncertain/` and excluded from the correct and incorrect counts and from the annotation table. |
-| **← Previous / Next →** | Move between segments without recording a decision. |
-| **Type / Minimum (Hz) / Maximum (Hz) / Floor (dB)** | Redraw the spectrogram immediately, on a mel, linear or logarithmic frequency axis. The audio player is not affected, so playback continues while the view changes. The view is stored in the browser. |
-| **✎** | Edit the label list: each button displays a **×** that removes it, and the field below adds a new label. Changes are saved to the label list file (`reviau/labels.txt` by default). |
-| **⚙** | Open the [reading settings](#reading-settings) of the folder: filename pattern, date-time format, label source and label depth. |
-| **⟳** | Rescan the folder, for example after new segments have been added. |
-| **Language** | Switch the interface between English and Português. |
-| **◐ / ☀ / ☾** | Theme: system default, light or dark; each click selects the next. The selected theme is stored in the browser. The spectrogram keeps its colours in both themes. |
-
-The prediction is the question, and Correct or Incorrect is the answer; the label
-buttons only add what else is present. No label is ever selected in advance, so a
-segment rejected without further selection is saved as containing no label from
-the list, and never with a label carried over from the previous clip. When a
-segment has no prediction to assess, a single **✔ Save** button files the
-selected labels. The server derives the outcome from the labels it receives,
-according to a single rule:
-
-| Labels saved | Outcome |
-| --- | --- |
-| the prediction | correct |
-| the prediction and other labels | correct (the other labels are recorded as *added*) |
-| other labels only | incorrect; the clip contains those labels |
-| none | incorrect; the clip contains no label from the list |
-| any, with Uncertain | uncertain |
-
-Several labels may be assigned to one segment, for example when two species
-vocalise at the same time. This is the default behaviour; `--no-multi-label`
-restricts each segment to a single label.
-
-Keyboard shortcuts: <kbd>←</kbd> and <kbd>→</kbd> move between segments;
-<kbd>T</kbd>, <kbd>F</kbd> and <kbd>U</kbd> record correct, incorrect and
-uncertain; <kbd>1</kbd>…<kbd>9</kbd> select or deselect the first nine labels;
-<kbd>Space</kbd> plays or pauses the audio.
-
-### The reviau folder
-
-Everything that a review writes is kept in one folder, **`reviau/`**, inside the
-segments folder:
-
-```
-segments/
-├── PONTO_A/BOAALB/clip.wav       ← clips pending review
-└── reviau/
-    ├── correct/                  ← reviewed clips, by outcome
-    ├── incorrect/
-    ├── uncertain/
-    ├── reviews.csv               ← the review log
-    ├── labels.txt                ← the label list
-    ├── settings.json             ← the reading settings
-    └── annotations.csv           ← the annotation table, with --annotations
-```
-
-The collection under review is therefore never mixed with the results: the only
-change made to it is that reviewed clips are moved out of it, and deleting
-`reviau/` removes everything that reviau wrote. The `reviau/` folder is excluded
-from the pending list, and every other folder of the collection is reviewed,
-whatever it is called. `--output` places this folder elsewhere; see
-[Writing to another location](#where-a-reviewed-clip-is-filed).
-
-### The label list
-
-The label buttons are taken from a list stored in **`labels.txt`** in the
-`reviau/` folder, one label per line. The first time a collection is opened, the
-list is built from the labels the collection already uses, and it is written to
-the file when the first segment is reviewed. From then on, the file is the list;
-it can be edited in the interface or by hand (blank lines and lines beginning
-with `#` are ignored).
-
-The list is never extended automatically: a rescan that finds a new folder does
-not add its name to the list. Removing labels from the list is also safe, since
-the label a clip carries is always shown as a button whether or not it is on the
-list, and a name typed into the field is both added to the list and selected for
-the segment on screen.
-
-`--labels-file` stores the list in another location. A relative path is resolved
-inside the `reviau/` folder; an absolute path, such as `~/classes.txt`, gives
-every folder opened the same list.
-
-### Where a reviewed clip is filed
-
-A reviewed clip is filed in the `reviau/` folder under its **outcome**, followed
-by the path it had, including the folder of the **predicted** label. Each folder therefore answers a
-single question: `incorrect/PONTO_A/BOAALB/` contains exactly the clips that the
-model labelled BOAALB incorrectly, so the number of files in each folder gives
-the precision for that class. The labels identified during the review are
-appended to the file name, so the folder tree can be read without consulting the
-log:
-
-```
-PONTO_A/BOAALB/clip.wav
-   ├── ✔ Correct                  →  reviau/correct/PONTO_A/BOAALB/clip_BOAALB.wav
-   ├── ✔ Correct, + PHYLUT        →  reviau/correct/PONTO_A/BOAALB/clip_BOAALB_PHYLUT.wav
-   ├── ✘ Incorrect, TURDRU        →  reviau/incorrect/PONTO_A/BOAALB/clip_TURDRU.wav
-   ├── ✘ Incorrect, TURDRU+PHYLUT →  reviau/incorrect/PONTO_A/BOAALB/clip_TURDRU_PHYLUT.wav
-   ├── ✘ Incorrect, none          →  reviau/incorrect/PONTO_A/BOAALB/clip.wav
-   └── ? Uncertain                →  reviau/uncertain/PONTO_A/BOAALB/clip.wav
-```
-
-- The file name **receives the labels that the clip was found to contain**. A
-  correct clip receives the confirmed prediction, followed by any label added; an
-  incorrect clip receives the labels that describe what it actually contains.
-  Added labels follow the order in which they were selected, with spaces written
-  as `_` (`chuva forte` becomes `_chuva_forte`), and the original name is kept in
-  full before them. An Incorrect with no label from the list, and every segment
-  marked Uncertain, keep their name unchanged.
-- When the label is read from the file name, the prediction is already part of
-  the name and is not appended a second time.
-- With a label depth above 0, the folders *below* the label are **not** recreated:
-  `BOAALB/PONTO_A/20240115/clip.wav` corrected to TURDRU becomes
-  `incorrect/BOAALB/clip_TURDRU.wav`, with one folder per predicted label
-  containing the clips directly.
-- A clip that arrived **without a label** has no prediction to assess. It is
-  filed under `labelled/`, keeping the folders it was in, and every label
-  assigned to it is appended to its name.
-- The folder names are the same in every interface language.
-- A name that already exists receives a `_2`, `_3`, … suffix; a reviewed file is
-  never overwritten.
-- The folder from which a clip was taken is **removed once its last clip has
-  been filed**, together with any parent folder that becomes empty, so the tree
-  of pending segments shrinks as the review progresses. A folder that still
-  contains anything, whether a pending clip or another file, is preserved, and
-  the segments folder itself is never removed.
-- Clips already filed in `reviau/` are excluded from the pending list, so a
-  review can be spread over several sessions.
-
-**Writing to another location.** `--output` (or `-o`) replaces the `reviau/`
-folder with a folder of the reviewer's choice, for example on another disk. The
-verdict folders, the review log, the label list, the reading settings and the
-annotation table are all written there:
-
-```bash
-reviau /data/segments --output /data/reviewed
-```
-
-A relative path is resolved against the segments folder (`-o reviewed` refers to
-`/data/segments/reviewed/`), an absolute path is used as given, and over SSH the
-path refers to the remote machine. To resume a review, the same `--output`
-should be given again: that folder is where the counts of segments already
-reviewed are taken, and clips already written there are never returned to the
-pending list. Because the option applies to every folder opened during the
-session, an absolute `--output` is intended for the review of a single
-collection; folders opened with it share one results folder.
-
-### The review log
-
-Every review adds one row to **`reviews.csv`**, in the `reviau/` folder. The
-log is always written and constitutes the record of the review:
-
-| Column | Content |
-| --- | --- |
-| `reviewed_at` | Date and time of the review, with the time zone |
-| `source`, `destination` | The original location of the clip, relative to the segments folder, and its new location, relative to the `reviau/` folder |
-| `predicted`, `score` | The label the clip arrived with, and the score given in its name |
-| `outcome` | `correct`, `incorrect`, `uncertain` or `labelled` |
-| `labels` | The labels the reviewer identified in the clip, separated by `;`; empty when it contains no label from the list |
-| `added` | The labels other than the prediction: the correction, or an additional species |
-| `site`, `recording`, `start_time`, `end_time` | As in the annotation table described below |
-
-The precision of each class is `correct / (correct + incorrect)`, grouped by
-`predicted`; comparing `predicted` with `labels` in the incorrect rows gives the
-confusion between classes. If the log cannot be written, the clip is moved back
-to its original location and the review is rejected, so a clip is never filed
-without a corresponding row.
-
-### The annotation table
-
-With `--annotations`, every label that a segment is **confirmed to contain** is
-added to `annotations.csv`, in the `reviau/` folder, with the columns `site, file, label, start_time, end_time`,
-one row per label, so a segment containing two species produces two rows. A
-rejected prediction never appears in the table, nor do segments marked uncertain
-or found to contain no label from the list. The times give the position of the
-clip within the recording from which it was cut; they are read from its name and
-extended to the actual duration of the clip, so that any padding is included.
-
-`file` names that source recording. Since the name of a clip rarely identifies
-the recording from which it was cut, the recording is looked up in an optional
-`segment_sources.csv` (`segment,recording`) in the segments folder. Without that
-file the column is left empty, and the interface reports this below the buttons.
-
-Rows are written as each segment is reviewed, and an existing table is extended,
-so reviews spread over several sessions accumulate in the same table.
-
----
-
-## Reading settings
-
-How the file names and folders of a collection are read is a property of the
-collection, so it is set per folder, from the **⚙** button next to the folder box,
-rather than on the command line. The settings are saved in **`settings.json`**
-in the `reviau/` folder, so a folder reopens with its own settings on any machine
-and in any browser. As with the label list, the file is written only when
-settings are applied, never when a folder is merely opened.
-
-| Setting | Function |
-| --- | --- |
-| **Filename pattern** | How file names are read: the *default* pattern, the *vector search* preset, or a custom template or regular expression, described below |
-| **Date-time format** | The `strptime` format of the captured date and time (by default `%Y%m%d%H%M%S`) |
-| **Label source** | *Automatic* (the file name when the pattern captures a label, otherwise the folder), *Folder*, *File name* or *None* |
-| **Label depth** | The folder level that carries the label, counting down from the segments folder: 0 is the folder containing the clip, 1 the first folder below the segments folder |
-
-While the settings are edited, a **preview** shows how many of the pending names
-the pattern recognises and what it reads from the first few: label, site, date,
-window and score. Settings that cannot be used, such as a template with an
-unknown placeholder, are reported with the reason, and **Apply** remains
-unavailable until they are corrected. Applying the settings saves them and
-reopens the folder with them.
-
-Names that do not match the pattern can still be reviewed; the interface
-displays less information about them, and nothing that it cannot read reliably.
-When a folder is opened, a notice below the folder box reports any names that
-the pattern does not recognise.
-
-### Writing a template
-
-The simpler form of custom pattern is to **write the name out, with its parts
-named in brackets**. Everything outside the brackets is matched literally. For
-names such as `PONTO_A_20240115T053000_REC_12.0_17.0_BOAALB_0.873.wav`:
-
-```
-[site]_YYYYMMDDTHHMMSS_REC_[start_time]_[end_time]_[label]_[score]
-```
-
-| In a template | Matches |
-| --- | --- |
-| `[site]`, `[label]` | free text, which may contain underscores |
-| `YYYYMMDD`, `HHMMSS` | the date and the time, written as shown or as `[date]` and `[time]` |
-| `[datetime]` | the date and time together, in any format, described by the date-time format |
-| `[start_time]`, `[end_time]` | the window of the clip within the recording, in seconds |
-| `[score]` | a similarity or confidence value |
-| `[extra]` | any remaining text, displayed in the interface as *Other* |
-| `*` | any text, which is not captured |
-| any other text | itself, literally |
-
-Every placeholder is optional, but the template must match the **entire** name.
-A partial match would fill the interface with information read from the wrong
-parts of the name, so it is treated as no match. An unknown placeholder, such as
-the misspelling `[speceis]`, is rejected rather than ignored.
-
-### Writing a regular expression
-
-For names that no template can describe, the custom pattern also accepts **any
-regular expression with named groups**: `site`, `date`, `time`, `datetime`,
-`start`, `end`, `label`, `score` and `extra`. All of them are optional, and the
-expression is matched against the name without its extension. For names such as
-`BOAALB-siteA-202401150530.wav`, with the label first and a 12-digit timestamp:
-
-```
-^(?P<label>[A-Z]+)-(?P<site>\w+)-(?P<datetime>\d{12})$
-```
-
-with the date-time format `%Y%m%d%H%M`.
-
-### Source of the label
-
-With the *Automatic* source, a pattern that captures a `label` group reads the
-label from the file name, and any other pattern reads it from the folder. When
-the label is read from the file name, the clip is filed directly under its
-outcome and its predicted label, for example `incorrect/BOAALB/clip_TURDRU.wav`.
-
-To keep the folders instead, the *Folder* source must be selected explicitly. For
-segments organised as `[label]/[site]_YYYYMMDD/clip.wav`, the *Folder* source
-with label depth 1 reads the label from the top folder and keeps the site folder
-below it, while the site, times and score are still read from the name.
-
-### The vector-search preset
-
-The *vector search* preset reads names of the form
-`SITE_YYYYMMDD_HHMMSS_START-ENDs_SCORE_LABEL.wav`, as written by the bioacoustic
-vector-search notebooks, with the **label and the similarity score in the
-name**.
-
-Because the label is part of the name, clips are filed directly under their
-outcome and predicted label (`correct/BOAALB/`, `incorrect/BOAALB/`), and the
-labels added are appended to the name as in every other case: a segment named
-`..._0.873_BOAALB.wav` and corrected to TURDRU becomes
-`incorrect/BOAALB/..._0.873_BOAALB_TURDRU.wav`. A segment confirmed as BOAALB
-keeps its name, `correct/BOAALB/..._0.873_BOAALB.wav`, since the prediction is
-already at its end. The score is displayed next to
-the label in the interface and is also recorded in the log.
-
----
-
-## Reviewing segments over SSH
-
-When a remote folder is given, every operation is carried out over SFTP: listing
-the folder, reading clips, moving them into the verdict folders and writing the
-log and the annotation table. Clips are cached locally as they are opened, so
-returning to a previous clip does not require downloading it again.
-
-```bash
-reviau ssh://user@fieldserver:22/data/segments
-reviau fieldserver:/data/segments          # scp-style address
-reviau ssh://fieldserver/data/segments --ssh-key ~/.ssh/id_field
-```
-
-The user and port are given in the address (`ssh://user@host:port/path`) or
-taken from `~/.ssh/config`, together with host aliases and identity files, and an
-SSH agent is used when one is running. Where neither a key nor an agent can be
-used, a password is read from the `REVIAU_SSH_PASSWORD` environment variable; it
-is never accepted on the command line, where it would be recorded in the shell
-history. An unknown host key is rejected unless `--accept-new-host-key` is given.
-
-On the remote machine, nothing is written outside the `reviau/` folder (or the
-`--output` folder), and no clip is ever deleted: reviewed clips are only moved
-from the segments folder into it.
-
----
-
-## Running on a server
-
-The interface is an ordinary web page, so the tool can run on the machine that
-holds the audio and be used from any other:
-
-```bash
-reviau /data/segments --host 0.0.0.0 --port 8765 --no-open
-```
-
-When a non-loopback address is bound, an **access token** is generated and
-included in the printed address; once that address has been opened, the token is
-stored in a cookie. `--token mysecret` sets the token explicitly, and `--no-auth`
-serves the interface without one.
-
-The token prevents casual access but does not provide encryption (TLS). Anyone
-holding it can open and review (and therefore move clips in) any folder the
-reviewer can read, and can list the folder names of that machine. The token
-should therefore be treated as a password, and `--no-auth` should be avoided on
-shared networks. On untrusted networks, Tailscale (binding to the Tailscale
-address, or to `0.0.0.0` on a machine reachable only through the tailnet) or an
-SSH tunnel is recommended:
-
-```bash
-# on the server
-reviau /data/segments --port 8765 --no-open
-# on the local computer
-ssh -N -L 8765:127.0.0.1:8765 user@server   # then open http://127.0.0.1:8765
-```
-
-The tool supports one reviewer at a time. The pending list, the current position
-and the open folder are held by the server, so two browsers connected to the same
-instance control the same session; a folder opened in one is opened in both.
-
----
-
-## Options
-
-```
-reviau [SEGMENTS] [OPTIONS]
-
-  SEGMENTS                      Folder to open at start-up: a local path, or
-                                ssh://[user@]host[:port]/path. Optional; a folder
-                                can be opened, and changed, in the browser
-
-  -l, --lang TEXT               Interface language at start-up: en, pt-BR  [default: en]
-      --labels-file TEXT        Location of the label list, one label per line.
-                                Relative paths are inside the reviau folder; an
-                                absolute path shares one list between folders
-                                [default: <output>/labels.txt]
-      --no-multi-label          Restrict each segment to one label (several labels
-                                per segment are allowed by default)
-      --annotations             Also write the annotation table of confirmed labels
-      --annotations-path TEXT   Location of the table  [default: <output>/annotations.csv]
-
-  -o, --output TEXT             Folder in which the reviewed segments, reviews.csv,
-                                labels.txt and settings.json are written
-                                [default: <SEGMENTS>/reviau]
-
-      --host TEXT               Address to bind  [default: 127.0.0.1]
-  -p, --port INTEGER            Port  [default: 8765]
-      --token TEXT              Access token for the interface
-      --no-auth                 Serve the interface without an access token
-      --open / --no-open        Open a browser at start-up  [default: open]
-
-      --ssh-key TEXT            Private key file for SSH connections
-      --known-hosts TEXT        Additional known_hosts file to trust
-      --accept-new-host-key     Accept an unknown SSH host key
-      --cache-dir TEXT          Location of the local cache of remote clips
-                                [default: a temporary folder]
-
-      --version                 Show the version and exit
-
-  Environment: REVIAU_SSH_PASSWORD  SSH password, where keys or an agent cannot be used
-```
-
-The filename pattern, the date-time format, the label source and the label depth
-are set per folder in the [reading settings](#reading-settings), and the
-spectrogram view is set in the interface and stored in the browser.
-
-### Verdict folders and language
-
-The verdict folders are always named `correct/`, `incorrect/`, `uncertain/` and
-`labelled/`, and the review log always records those outcome names, whatever the
-interface language. The data written by a review therefore never depends on the
-language in which it was carried out.
-
----
-
-## Development
-
-```bash
-git clone https://github.com/biodiversica/reviau
-cd reviau
-uv sync               # installs the project and the development tools
-uv run ruff check .   # lint
-uv run pytest         # tests
-uv run reviau /path/to/segments
-```
-
-The test suite covers the naming rules, the filing of reviewed clips, the HTTP
-API, the interface texts in both languages and a complete review carried out over
-an in-process SFTP server. The client's DOM-independent helpers are tested with
-Node.js, and those tests are skipped when Node.js is not installed. Continuous
-integration runs the lint and the tests on Linux, macOS and Windows, and also
-runs the installers on all three systems with the built package, followed by
-`scripts/smoke_test.py`, which reviews a clip with the installed command.
-
-Before pushing, the suite should also be run as the continuous integration runs
-it:
-
-```bash
-GITHUB_ACTIONS=true uv run pytest
-```
-
-Rich colours the Typer help output whenever it detects a terminal, which it
-always does on GitHub Actions. This changes the rendered output enough to break a
-test that passes locally.
-
-### Making a release
-
-Set the new version in both `pyproject.toml` and `src/reviau/__init__.py`, run
-`uv lock`, commit the change, and then create and push a tag:
-
-```bash
-git tag v0.2.0 && git push origin v0.2.0
-```
-
-The tag triggers `.github/workflows/release.yml`. The tests run on all three
-systems, the package is uploaded to PyPI, and a **draft** GitHub release is
-created with the installers attached and the notes from
-`.github/release-notes.md`. After the highlights have been written, the release
-must be published, because the installation commands download from the latest
-*published* release. The build fails if the tag does not match the version in
-`pyproject.toml`, or if that version differs from the one in
-`src/reviau/__init__.py`.
+The command prints the address to open, and opens a browser on it. By default a
+clip's folder is its label and its name is read as
+`[site]_[YYYYMMDD]_[HHMMSS]_[start]_[end]_*`; both can be changed per folder
+from the **⚙** button. In the browser, <kbd>T</kbd>, <kbd>F</kbd> and
+<kbd>U</kbd> record correct, incorrect and uncertain, <kbd>1</kbd>…<kbd>9</kbd>
+add labels, and <kbd>Space</kbd> plays the clip. `reviau --help` lists every
+option.
+
+## Documentation
+
+| Page | Contents |
+|---|---|
+| [Installation](https://github.com/biodiversica/reviau/blob/main/docs/en/installation.md) | The installer, uv and pip, upgrading and uninstalling |
+| [How a Segment Is Read](https://github.com/biodiversica/reviau/blob/main/docs/en/segments.md) | The label from the folder, the label depth, the default file-name pattern |
+| [Reviewing in the Browser](https://github.com/biodiversica/reviau/blob/main/docs/en/reviewing.md) | Opening a folder, the controls, how the outcome is decided, keyboard shortcuts |
+| [The reviau Folder](https://github.com/biodiversica/reviau/blob/main/docs/en/reviau-folder.md) | The label list, where a reviewed clip is filed, `--output`, the review log, the annotation table |
+| [Reading Settings](https://github.com/biodiversica/reviau/blob/main/docs/en/reading-settings.md) | Per-folder file-name templates, regular expressions, the label source, the vector-search preset |
+| [Reviewing over SSH](https://github.com/biodiversica/reviau/blob/main/docs/en/ssh.md) | Remote folders, authentication, what is written on the remote machine |
+| [Running on a Server](https://github.com/biodiversica/reviau/blob/main/docs/en/server.md) | Serving the interface to another machine, the access token, Tailscale and SSH tunnels |
+| [Command-Line Options](https://github.com/biodiversica/reviau/blob/main/docs/en/cli.md) | Examples and every option |
+| [Development](https://github.com/biodiversica/reviau/blob/main/docs/en/development.md) | Working on reviau itself, tests and CI |
 
 ## Licence
 
-MIT; see [LICENSE](https://github.com/biodiversica/reviau/blob/main/LICENSE).
+[MIT](https://github.com/biodiversica/reviau/blob/main/LICENSE)
