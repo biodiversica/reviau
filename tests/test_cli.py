@@ -1,4 +1,6 @@
 import re
+import subprocess
+import sys
 
 from typer.main import get_command
 from typer.testing import CliRunner
@@ -87,3 +89,22 @@ def test_the_segments_folder_is_optional():
     """It can be opened — and changed — from the browser instead."""
     segments = next(p for p in get_command(cli).params if p.name == "segments")
     assert segments.required is False
+
+
+def test_help_and_version_do_not_load_the_server():
+    """--help and --version answer without importing what only a running review
+    needs, which takes several times longer than the answer itself. Run in a
+    fresh interpreter: this one has long since imported all of it."""
+    heavy = ("fastapi", "uvicorn", "starlette", "librosa", "matplotlib", "numpy",
+             "scipy", "soundfile", "paramiko")
+    code = (
+        "import sys\n"
+        "from typer.testing import CliRunner\n"
+        "from reviau.cli import cli\n"
+        "for args in (['--help'], ['--version']):\n"
+        "    assert CliRunner().invoke(cli, args).exit_code == 0, args\n"
+        f"print(' '.join(sorted({{m.split('.')[0] for m in sys.modules}} & set({heavy!r}))))\n"
+    )
+    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
+                            check=True)
+    assert result.stdout.strip() == "", f"loaded for --help: {result.stdout.strip()}"

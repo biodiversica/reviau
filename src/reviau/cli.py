@@ -9,16 +9,19 @@ import socket
 import sys
 import threading
 import webbrowser
+from typing import TYPE_CHECKING
 
 import typer
-import uvicorn
 
 from . import __version__, i18n
 from .config import DEFAULT_LABELS_FILE, ReviewConfig
-from .review import ReviewSession
-from .server import create_app
-from .storage import open_backend
-from .workspace import OpenError, Workspace
+
+# The server and everything under it (FastAPI, uvicorn, librosa, matplotlib,
+# paramiko) are imported in review(), when a review actually starts: --help and
+# --version, and a mistyped option, then answer at once instead of after half a
+# second of imports they do not use. tests/test_cli.py keeps it that way.
+if TYPE_CHECKING:
+    from .review import ReviewSession
 
 cli = typer.Typer(
     add_completion=False,
@@ -207,6 +210,12 @@ def review(
     ),
 ) -> None:
     """Open SEGMENTS in the browser reviewer."""
+    import uvicorn
+
+    from .server import create_app
+    from .storage import open_backend
+    from .workspace import OpenError, Workspace
+
     language = i18n.normalize(lang)
     if language != lang:
         typer.secho(
