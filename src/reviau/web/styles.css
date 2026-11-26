@@ -14,20 +14,20 @@
   /* Three surfaces, kept clearly apart so the regions of the interface remain
      distinct on monitors with poor contrast: the page (--bg), the panels laid
      on it (--panel), and the fields and chips inside the panels (--field). */
-  --bg:         light-dark(#dfe4ea, #0a0c0f);
-  --panel:      light-dark(#ffffff, #1d232c);
-  --field:      light-dark(#eef1f5, #0f1217);
-  --ink:        light-dark(#111418, #f0f3f6);
-  --muted:      light-dark(#47515c, #aab4c0);
-  --line:       light-dark(#a9b3bf, #465162);
+  --bg:         light-dark(#dfe4ea, #0b0b0b);
+  --panel:      light-dark(#ffffff, #202020);
+  --field:      light-dark(#eef1f5, #131313);
+  --ink:        light-dark(#111418, #ededed);
+  --muted:      light-dark(#47515c, #ababab);
+  --line:       light-dark(#a9b3bf, #4a4a4a);
   --ok:         light-dark(#1a7f47, #2e9e5b);
   --ok-ink:     light-dark(#ffffff, #ffffff);
   --no:         light-dark(#b3261e, #d3554c);
   --no-ink:     light-dark(#ffffff, #ffffff);
   --warn:       light-dark(#b36b00, #d9a441);
   --warn-ink:   light-dark(#ffffff, #1b1407);
-  --accent:     light-dark(#2b5bd7, #6d9bff);
-  --accent-ink: light-dark(#ffffff, #0d1117);
+  --accent:     light-dark(#2b5bd7, #4fc3e0);
+  --accent-ink: light-dark(#ffffff, #0b1416);
   --backdrop:   light-dark(rgba(0, 0, 0, .45), rgba(0, 0, 0, .6));
   --radius: 10px;
   --foot-height: 28px;
