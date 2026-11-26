@@ -51,7 +51,7 @@ definida. No Windows, feche primeiro a janela do reviau e, em seguida, execute
 no PowerShell:
 
 ```powershell
-powershell -ExecutionPolicy ByPass -c '$env:REVIAU_UNINSTALL=1; irm https://github.com/biodiversica/reviau/releases/latest/download/install.ps1 | Out-String | iex'
+$env:REVIAU_UNINSTALL=1; irm https://github.com/biodiversica/reviau/releases/latest/download/install.ps1 | Out-String | iex
 ```
 
 No macOS e no Linux:

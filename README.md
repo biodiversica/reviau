@@ -48,7 +48,7 @@ changing anything.
 Windows, close the reviau window first, then run in PowerShell:
 
 ```powershell
-powershell -ExecutionPolicy ByPass -c '$env:REVIAU_UNINSTALL=1; irm https://github.com/biodiversica/reviau/releases/latest/download/install.ps1 | Out-String | iex'
+$env:REVIAU_UNINSTALL=1; irm https://github.com/biodiversica/reviau/releases/latest/download/install.ps1 | Out-String | iex
 ```
 
 On macOS and Linux:
