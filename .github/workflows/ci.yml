@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"  # Mondays
   # release.yml runs this first, and publishes the wheel built here.
   workflow_call:
 
@@ -41,6 +43,23 @@ jobs:
         run: uv sync --locked
       - name: Lint
         run: uv run ruff check .
+      - name: Test
+        run: uv run pytest
+
+  # The installer ignores uv.lock and takes the newest releases, so test those
+  # too. The weekly run catches a dependency release between commits.
+  tests-latest:
+    name: tests / newest dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - name: Install
+        run: uv sync --upgrade
       - name: Test
         run: uv run pytest
 
