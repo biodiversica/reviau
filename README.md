@@ -25,13 +25,14 @@ in **English** and **Português (Brasil)**.
 
 ## Installation
 
-**Without Python.** The installer sets up everything required and adds the
-`reviau` command. Running it again upgrades the installation.
+**Without Python.** The installer sets up everything required, adds the
+`reviau` command and a **reviau** shortcut that opens the interface. Running it
+again upgrades the installation.
 
 On Windows, open PowerShell and run:
 
 ```powershell
-powershell -ExecutionPolicy ByPass -c "irm https://github.com/biodiversica/reviau/releases/latest/download/install.ps1 | iex"
+powershell -ExecutionPolicy ByPass -c "irm https://github.com/biodiversica/reviau/releases/latest/download/install.ps1 | Out-String | iex"
 ```
 
 On macOS and Linux, open a terminal and run:
@@ -39,6 +40,24 @@ On macOS and Linux, open a terminal and run:
 ```sh
 curl -LsSf https://github.com/biodiversica/reviau/releases/latest/download/install.sh | sh
 ```
+
+The installer lists what it is going to do and asks for confirmation before
+changing anything.
+
+**Uninstalling.** Run the installer again with `REVIAU_UNINSTALL` set. On
+Windows, close the reviau window first, then run in PowerShell:
+
+```powershell
+powershell -ExecutionPolicy ByPass -c '$env:REVIAU_UNINSTALL=1; irm https://github.com/biodiversica/reviau/releases/latest/download/install.ps1 | Out-String | iex'
+```
+
+On macOS and Linux:
+
+```sh
+curl -LsSf https://github.com/biodiversica/reviau/releases/latest/download/install.sh | REVIAU_UNINSTALL=1 sh
+```
+
+Segments, and the reviews in their `reviau/` folders, are never removed.
 
 **With uv or pip.** reviau is published on PyPI and requires Python 3.10 or
 later:
@@ -49,7 +68,8 @@ pip install reviau       # or with pip, into the current environment
 ```
 
 [Installation](https://github.com/biodiversica/reviau/blob/main/docs/en/installation.md)
-describes what the installer does, upgrading and uninstalling.
+describes what the installer does, its environment variables, and what
+uninstalling removes and leaves behind.
 
 ## Quick Start
 
@@ -72,7 +92,7 @@ option.
 
 | Page | Contents |
 |---|---|
-| [Installation](https://github.com/biodiversica/reviau/blob/main/docs/en/installation.md) | The installer, uv and pip, upgrading and uninstalling |
+| [Installation](https://github.com/biodiversica/reviau/blob/main/docs/en/installation.md) | The installer and its shortcut, uninstalling, uv and pip |
 | [How a Segment Is Read](https://github.com/biodiversica/reviau/blob/main/docs/en/segments.md) | The label from the folder, the label depth, the default file-name pattern |
 | [Reviewing in the Browser](https://github.com/biodiversica/reviau/blob/main/docs/en/reviewing.md) | Opening a folder, the controls, how the outcome is decided, keyboard shortcuts |
 | [The reviau Folder](https://github.com/biodiversica/reviau/blob/main/docs/en/reviau-folder.md) | The label list, where a reviewed clip is filed, `--output`, the review log, the annotation table |

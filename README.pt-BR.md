@@ -28,12 +28,13 @@ interface está disponível em **Português (Brasil)** e **Inglês**.
 ## Instalação
 
 **Sem Python.** O instalador configura tudo o que é necessário e adiciona o
-comando `reviau`. Executá-lo novamente atualiza a instalação.
+comando `reviau` e um atalho **reviau** que abre a interface. Executá-lo
+novamente atualiza a instalação.
 
 No Windows, abra o PowerShell e execute:
 
 ```powershell
-powershell -ExecutionPolicy ByPass -c "irm https://github.com/biodiversica/reviau/releases/latest/download/install.ps1 | iex"
+powershell -ExecutionPolicy ByPass -c "irm https://github.com/biodiversica/reviau/releases/latest/download/install.ps1 | Out-String | iex"
 ```
 
 No macOS e no Linux, abra um terminal e execute:
@@ -41,6 +42,25 @@ No macOS e no Linux, abra um terminal e execute:
 ```sh
 curl -LsSf https://github.com/biodiversica/reviau/releases/latest/download/install.sh | sh
 ```
+
+O instalador lista o que vai fazer e pede confirmação antes de alterar
+qualquer coisa.
+
+**Desinstalação.** Execute o instalador novamente com `REVIAU_UNINSTALL`
+definida. No Windows, feche primeiro a janela do reviau e, em seguida, execute
+no PowerShell:
+
+```powershell
+powershell -ExecutionPolicy ByPass -c '$env:REVIAU_UNINSTALL=1; irm https://github.com/biodiversica/reviau/releases/latest/download/install.ps1 | Out-String | iex'
+```
+
+No macOS e no Linux:
+
+```sh
+curl -LsSf https://github.com/biodiversica/reviau/releases/latest/download/install.sh | REVIAU_UNINSTALL=1 sh
+```
+
+Os segmentos, e as revisões nas suas pastas `reviau/`, nunca são removidos.
 
 **Com uv ou pip.** O reviau está publicado no PyPI e requer o Python 3.10 ou
 posterior:
@@ -50,8 +70,8 @@ uv tool install reviau   # como ferramenta de linha de comando isolada
 pip install reviau       # ou com pip, no ambiente atual
 ```
 
-[Instalação](docs/pt-BR/installation.md) descreve o que o instalador faz, a
-atualização e a desinstalação.
+[Instalação](docs/pt-BR/installation.md) descreve o que o instalador faz, as
+suas variáveis de ambiente e o que a desinstalação remove e mantém.
 
 ## Início Rápido
 
@@ -74,7 +94,7 @@ opções.
 
 | Página | Conteúdo |
 |---|---|
-| [Instalação](docs/pt-BR/installation.md) | O instalador, uv e pip, atualização e desinstalação |
+| [Instalação](docs/pt-BR/installation.md) | O instalador e o seu atalho, a desinstalação, uv e pip |
 | [Como um Segmento É Lido](docs/pt-BR/segments.md) | O rótulo a partir da pasta, o nível do rótulo, o padrão de nome padrão |
 | [Revisão no Navegador](docs/pt-BR/reviewing.md) | Abertura de uma pasta, os controles, como o resultado é determinado, atalhos de teclado |
 | [A Pasta reviau](docs/pt-BR/reviau-folder.md) | A lista de rótulos, onde o clipe revisado é arquivado, `--output`, o registro da revisão, a tabela de anotações |

@@ -63,13 +63,15 @@ jobs:
             exit 1
           fi
       - run: uv build
-      - name: Check the wheel carries the GUI and the locales
+      - name: Check the wheel carries the GUI, the locales and the icons
         run: |
           uv run --no-project python - <<'PY'
           import glob, zipfile
           names = zipfile.ZipFile(glob.glob("dist/*.whl")[0]).namelist()
           need = ["web/index.html", "web/app.js", "web/lib.js", "web/styles.css",
-                  "locales/en.json", "locales/pt-BR.json"]
+                  "locales/en.json", "locales/pt-BR.json",
+                  # the installers give their shortcuts these icons
+                  "web/icons/reviau.ico", "web/icons/reviau.png", "web/icons/reviau.svg"]
           missing = [n for n in need if not any(x.endswith(n) for x in names)]
           assert not missing, f"missing from the wheel: {missing}"
           print("wheel contents OK")
@@ -104,18 +106,76 @@ jobs:
       - name: Run install.sh
         if: runner.os != 'Windows'
         run: |
-          REVIAU_PACKAGE="reviau @ $(ls "$PWD"/dist/*.whl)" sh scripts/install.sh
-      - name: Run install.ps1
+          REVIAU_YES=1 REVIAU_PACKAGE="reviau @ $(ls "$PWD"/dist/*.whl)" sh scripts/install.sh
+      # The README's command, as typed, in Windows PowerShell 5.1 (the one
+      # every Windows machine has), on this checkout's script served as a
+      # release serves it. See .github/scripts/readme-command.ps1.
+      - name: Run install.ps1 with the README command
         if: runner.os == 'Windows'
-        # Windows PowerShell 5.1, the one every Windows machine has.
         shell: powershell
         run: |
+          $env:REVIAU_YES = "1"
           $env:REVIAU_PACKAGE = "reviau @ $((Get-ChildItem dist\*.whl).FullName)"
-          powershell -NoProfile -ExecutionPolicy ByPass -File scripts\install.ps1
+          powershell -NoProfile -ExecutionPolicy ByPass -File .github\scripts\readme-command.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: The launcher is in place, with its icon
+        run: |
+          case "$RUNNER_OS" in
+            Linux)
+              test -f "$HOME/.local/share/applications/reviau.desktop"
+              grep -qx "Icon=reviau" "$HOME/.local/share/applications/reviau.desktop"
+              test -f "$HOME/.local/share/icons/hicolor/scalable/apps/reviau.svg"
+              test -f "$HOME/.local/share/icons/hicolor/512x512/apps/reviau.png" ;;
+            macOS)
+              test -x "$HOME/Desktop/reviau.command" ;;
+            Windows)
+              test -f "$USERPROFILE/Desktop/reviau.lnk"
+              test -f "$LOCALAPPDATA/reviau/reviau.ico" ;;
+          esac
 
       - name: The installed command reviews a clip
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           reviau --version
           uv run --no-project python scripts/smoke_test.py
+
+      # Uninstalling takes reviau, its launcher and the launcher's icon, and
+      # never a folder of segments or the reviews in it.
+      - name: Uninstall with install.sh
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p "$HOME/segments/reviau"
+          REVIAU_YES=1 REVIAU_UNINSTALL=1 sh scripts/install.sh
+          test ! -e "$HOME/.local/bin/reviau"
+          case "$RUNNER_OS" in
+            Linux)
+              test ! -e "$HOME/.local/share/applications/reviau.desktop"
+              test ! -e "$HOME/.local/share/icons/hicolor/scalable/apps/reviau.svg"
+              test ! -e "$HOME/.local/share/icons/hicolor/512x512/apps/reviau.png" ;;
+            macOS)
+              test ! -e "$HOME/Desktop/reviau.command" ;;
+          esac
+          test -d "$HOME/segments/reviau"
+      - name: Uninstall with the README command
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          # Windows will not delete a running program; the smoke test stops the
+          # interface it starts, so this is only in case it could not.
+          Get-Process reviau -ErrorAction SilentlyContinue | Stop-Process -Force
+          Start-Sleep 2
+          New-Item -ItemType Directory -Force -Path (Join-Path $HOME "segments\reviau") | Out-Null
+          $env:REVIAU_YES = "1"
+          powershell -NoProfile -ExecutionPolicy ByPass -File .github\scripts\readme-command.ps1 -Uninstall
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $Gone = @(
+              (Join-Path $HOME ".local\bin\reviau.exe"),
+              (Join-Path ([Environment]::GetFolderPath("Desktop")) "reviau.lnk"),
+              (Join-Path ([Environment]::GetFolderPath("Programs")) "reviau.lnk"),
+              (Join-Path $env:LOCALAPPDATA "reviau")
+          )
+          foreach ($Path in $Gone) {
+              if (Test-Path $Path) { throw "still there after uninstalling: $Path" }
+          }
+          if (-not (Test-Path (Join-Path $HOME "segments\reviau"))) { throw "the segments went too" }
