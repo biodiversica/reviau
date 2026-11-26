@@ -57,7 +57,6 @@
 
   function applyI18n() {
     document.documentElement.lang = app.lang;
-    document.title = t('app.title');
     for (const node of document.querySelectorAll('[data-i18n]')) node.innerHTML = t(node.dataset.i18n);
     for (const node of document.querySelectorAll('[data-i18n-title]')) node.title = t(node.dataset.i18nTitle);
     for (const node of document.querySelectorAll('[data-i18n-ph]')) node.placeholder = t(node.dataset.i18nPh);
@@ -728,6 +727,8 @@
     try {
       const boot = await api('/api/bootstrap');
       app.boot = boot;
+      // The tab shows the name and the version, the same in every language.
+      document.title = `reviau ${boot.version}`;
       app.multi = boot.multi_label;
       app.state = boot.state;
 

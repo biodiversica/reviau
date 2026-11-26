@@ -29,10 +29,6 @@
   --accent:     light-dark(#2b5bd7, #4fc3e0);
   --accent-ink: light-dark(#ffffff, #0b1416);
   --backdrop:   light-dark(rgba(0, 0, 0, .45), rgba(0, 0, 0, .6));
-  /* The logo keeps the dark theme's panel and text in both themes, as the icon
-     files do (scripts/make_icons.py). */
-  --logo-bg:    light-dark(#202020, #202020);
-  --logo-ink:   light-dark(#ededed, #ededed);
   --radius: 10px;
   --foot-height: 28px;
   /* One typeface for the whole interface; the system's own monospace, so
@@ -72,13 +68,6 @@ button, input, select, textarea, code, kbd, pre, samp { font-family: var(--font)
 }
 .bar-left, .bar-right { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .app-title { font-weight: 650; white-space: nowrap; }
-.app-logo {
-  display: inline-block;
-  padding: 1px 6px;
-  border-radius: 5px;
-  background: var(--logo-bg);
-  color: var(--logo-ink);
-}
 /* ── the folder under review ─────────────────────────────────────────────── */
 .folder-bar {
   display: flex;

@@ -26,8 +26,7 @@ from PIL import Image, ImageDraw
 
 TEXT = "(| |)"
 FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf"
-# The dark (graphite) theme's panel and text, which the logo in the top bar
-# also keeps in the light theme (--logo-bg and --logo-ink in
+# The dark (graphite) theme's panel and text (--panel and --ink in
 # src/reviau/web/styles.css).
 BACKGROUND = "#202020"
 FOREGROUND = "#ededed"
