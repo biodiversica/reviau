@@ -1,4 +1,4 @@
-# (| reviau |)
+# (| |) reviau
 
 *English · [Português (Brasil)](https://github.com/biodiversica/reviau/blob/main/README.pt-BR.md)*
 
