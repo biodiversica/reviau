@@ -33,6 +33,18 @@ O Rich colore a saída de ajuda do Typer sempre que detecta um terminal, o que
 ocorre invariavelmente no GitHub Actions. Isso altera a saída renderizada o
 suficiente para quebrar um teste que passa localmente.
 
+## Ícones
+
+O logotipo, `(| |)` sobre a cor do painel do tema escuro, é desenhado por
+`scripts/make_icons.py` em `src/reviau/web/icons/` (SVG, PNG e um ICO com
+vários tamanhos), que é servido como ícone da aba do navegador. Após alterar o
+logotipo ou as suas cores, execute-o novamente e registre (commit) os arquivos
+que ele grava:
+
+```bash
+uv run scripts/make_icons.py
+```
+
 ## Documentação
 
 A documentação fica em [`docs/`](../README.md), com uma página por assunto em

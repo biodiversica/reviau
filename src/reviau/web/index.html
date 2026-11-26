@@ -15,13 +15,14 @@
       }
     } catch (e) { /* storage unavailable: follow the system */ }
   </script>
-  <!-- No tab icon; an empty one keeps the browser from asking for /favicon.ico. -->
-  <link rel="icon" href="data:,">
+  <!-- Drawn by scripts/make_icons.py, which also makes the installers' icons. -->
+  <link rel="icon" href="/static/icons/reviau.svg" type="image/svg+xml">
+  <link rel="icon" href="/static/icons/reviau.png" type="image/png" sizes="512x512">
 </head>
 <body>
   <header class="bar">
     <div class="bar-left">
-      <span class="app-title" data-i18n="app.title">(| |) reviau</span>
+      <span class="app-title"><span class="app-logo">(| |)</span> reviau</span>
     </div>
     <div class="bar-right">
       <span class="counts" id="counts"></span>
